@@ -29,7 +29,7 @@ setup(
 
     long_description_content_type='text/markdown',
 
-    url='https://horus.nu', # "https://github.com/pypa/sampleproject",
+    url='https://github.com/horus-view-and-explore/horus-media-client',
 
     author_email="info@horus.nu",
 
@@ -55,12 +55,5 @@ setup(
     extras_require={
         'dev': [],
         'test': [],
-    },
-
-
-    entry_points={
-        'console_scripts': [
-            'sample=sample:example_strategy',
-        ],
     },
 )
