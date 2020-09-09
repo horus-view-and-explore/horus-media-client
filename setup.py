@@ -21,7 +21,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='horus-media-client',
 
-    version='0.3.2',
+    version='0.3.3',
 
     description='Horus Media Server Client',
 
@@ -48,11 +48,11 @@ setup(
     python_requires='>=3.6, <4',
 
     install_requires=[
-        "psycopg2>=2.8.4"
-        "numpy>=1.17.4"
-        "pymap3d>=2.1.0"
-        "pillow>=6.2.1"
-        "scipy>=1.3.3"
+        "psycopg2>=2.8.4",
+        "numpy>=1.17.4",
+        "pymap3d>=2.1.0",
+        "pillow>=6.2.1",
+        "scipy>=1.3.3",
     ],
 
     extras_require={
