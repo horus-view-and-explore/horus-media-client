@@ -1,4 +1,4 @@
-# Horus Media Sever Client
+# Horus Media Server Client
 
 ## Install latest
 
