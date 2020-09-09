@@ -21,7 +21,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='horus-media-client',
 
-    version='0.3.1',
+    version='0.3.2',
 
     description='Horus Media Server Client',
 
@@ -35,9 +35,12 @@ setup(
 
     author='Horus View and Explore B.V.',
 
+    license='MIT',
+
     classifiers=[
         "Programming Language :: Python :: 3.6",
         "Operating System :: OS Independent",
+        "License :: OSI Approved :: MIT License",
     ],
 
     packages=find_packages(where='.'),
