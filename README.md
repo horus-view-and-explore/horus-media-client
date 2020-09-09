@@ -2,16 +2,11 @@
 
 An [Horus Media Server](https://horus.nu/horus-geo-suite/) client python library
 
-## Install latest
+## [Install latest release](./wiki/Install-latest-release)
 
-Install the latest package using pip.
-
-```
-pip install horus-media-client
-```
 
 ## Run example strategy tool
 
 ```
-python -m horus_media_examples.example_strategy --help
+python3 -m horus_media_examples.example_strategy --help
 ```
