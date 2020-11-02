@@ -24,7 +24,7 @@ class TestRecordings(unittest.TestCase):
         recording = Recording(recordings.get(recording_id))
         self.assertEqual(recording.id, 613)
         self.assertEqual(
-            recording.directory, "D:\\Recordings\\184 Van der Meer Grondverzet\\518402 - Beelden Kraggenburg\\360 - beelden\\Recording_01-01-2001_00-34-45")
+            recording.directory, "D:\\Recordings\\Porject A\\Sub Project B\\Recording_01-01-2001_00-34-45")
         self.assertEqual(recording.bounding_box,
                          "BOX(5.89323166666667 52.6755798266667,5.89833665333333 52.6773494)")
         self.assertEqual(recording.file_format, 1)

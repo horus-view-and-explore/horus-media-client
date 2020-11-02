@@ -81,7 +81,7 @@ class Frames:
         self.__connection = connection
 
     def query(self, **kwargs):
-        select_caluse = {
+        select_clause = {
             "id",
             "recordingid",
             "guid",
@@ -105,13 +105,13 @@ class Frames:
             if arg == "within":
                 point, distance = value
                 st_point = f"ST_SetSRID(ST_Point({point[0]}, {point[1]}), 4326)"
-                select_caluse.add(
+                select_clause.add(
                     f"ST_Distance(geom::geography, {st_point}::geography) as distance")
                 orderby_clause.append("distance")
                 where_clause.append(
                     f"ST_DWithin(geom::geography, {st_point}::geography, {distance})")
                 continue
-            if arg in select_caluse:
+            if arg in select_clause:
                 if type(value) != tuple:
                     value = (value,)
                 where_clause.append(f"{arg}" + " IN %s")
@@ -134,7 +134,7 @@ class Frames:
 
             logging.warning(f'Frames query unknown argument "{arg}" skipped')
 
-        sql = "SELECT " + ", ".join(select_caluse) + " FROM frames"
+        sql = "SELECT " + ", ".join(select_clause) + " FROM frames"
 
         if len(where_clause) > 0:
             sql += " WHERE " + " AND ".join(where_clause)
