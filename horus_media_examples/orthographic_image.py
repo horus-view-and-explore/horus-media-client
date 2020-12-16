@@ -33,8 +33,8 @@ else:
     alti_next = None
 
 # Set parameters
-mode = Mode.orthographic
-# Size of back-buffer, should at least be the size of the original camera resolution of the roi
+
+# Size of render buffer, should at least be the size of the original camera resolution of the roi
 size = Size(4096, 2048) 
 
 # The geometry values relative to the frame center, same as used in the Horus MoviePlayer ortho projection
@@ -47,7 +47,7 @@ geometry = Geometry(geom_scale, geom_width, geom_height, geom_dist, geom_shift, 
 
 # Get the image
 request_builder = ImageRequestBuilder(frame.recordingid, frame.uuid)
-request = client.fetch(request_builder.build(mode, None, None, size, None, geometry))
+request = client.fetch(request_builder.build_orthographic(size, geometry))
 result = image_provider.fetch(request)
 
 # Save the file

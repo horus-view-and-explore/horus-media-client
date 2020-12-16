@@ -10,6 +10,7 @@ from enum import Enum
 import urllib.parse
 import io
 import math
+import json
 import logging
 import http.client
 
@@ -187,6 +188,7 @@ class Mode(Enum):
     panoramic = 0
     spherical = 1
     orthographic = 2
+    geographic = 3
 
     def __str__(self):
         return self.name
@@ -215,7 +217,7 @@ class Client:
         self.url = url
         self.__parsed_url = urllib.parse.urlparse(url)
         self.__connection = http.client.HTTPConnection(
-            self.__parsed_url.hostname, self.__parsed_url.port)
+            self.__parsed_url.hostname, self.__parsed_url.port, timeout=4)
         self.__connection.connect()
 
     def fetch(self, request):
@@ -242,7 +244,7 @@ class Client:
 
 
 class ImageRequest:
-    def __init__(self, builder, resource, mode=None, scale=None, section=None, size=None, direction=None, geometry=None):
+    def __init__(self, builder, resource, mode=None, scale=None, section=None, size=None, direction=None, fov=None, cams = None, geometry=None):
         self.local_file = None
         self.builder = builder
         self.resource = resource
@@ -251,6 +253,8 @@ class ImageRequest:
         self.section = section
         self.size = size
         self.direction = direction
+        self.fov = fov
+        self.cams = cams
         self.geometry = geometry
         self.url = None
         self.response = None
@@ -270,7 +274,20 @@ class ImageRequestBuilder:
         self.frame = frame
         self.__resource = f"./images/{recording}/{frame}"
 
-    def build(self, mode=None, scale=None, section=None, size=None, direction=None, geometry=None):
+    def build_spherical(self, size=None, direction=None, vof=None, cams=None):
+        return self.build(Mode.spherical, None, None, size, direction, vof, cams, None)
+
+    def build_orthographic(self, size, geometry):
+        return self.build(Mode.orthographic, None, None, size, None, None, None, geometry)
+
+    def build_geographic(self, size, direction=None, vof=None, x=None, y=None):
+        if x and y:
+            geometry = Geometry(0, x, y, 0, 0, 0)
+        else:
+            geometry = None
+        return self.build(Mode.geographic, None, None, size, direction, vof, None, geometry)
+
+    def build(self, mode=None, scale=None, section=None, size=None, direction=None, fov=None, cams=None, geometry=None):
         data = {}
         if mode:
             data["mode"] = mode
@@ -283,6 +300,10 @@ class ImageRequestBuilder:
         if direction:
             data["yaw"] = direction.yaw
             data["pitch"] = direction.pitch
+        if fov:
+            data["hor_fov"] = fov
+        if cams:
+            data["cams"] = cams
         if geometry:
             data["scale"] = geometry.scale
             data["geom_width"] = geometry.width
@@ -293,7 +314,7 @@ class ImageRequestBuilder:
                 data["alti_next"] = geometry.altitude
         url_values = urllib.parse.urlencode(data)
         url = urllib.parse.urljoin(self.__resource, "?" + url_values)
-        request = ImageRequest(self, url, mode, scale, section, size, direction, geometry)
+        request = ImageRequest(self, url, mode, scale, section, size, direction, fov, cams, geometry)
         if self.path_template:
             request.local_file = self.path_template.format(
                 recording=self.recording, frame=self.frame, mode=mode if mode else "", 
@@ -301,7 +322,6 @@ class ImageRequestBuilder:
         return request
 
 class ImageProvider:
-
     @dataclass(frozen=True)
     class Result:
         image: io.BytesIO
@@ -386,3 +406,53 @@ class ImageProvider:
             mp = range(size+1)
             return dict(zip(my_set, mp))
         return {}
+
+class ComputationRequest:
+    def __init__(self, builder, resource, size=None, direction=None, fov=None, x=None, y=None):
+        self.local_file = None
+        self.builder = builder
+        self.resource = resource
+        self.size = size
+        self.direction = direction
+        self.fov = fov
+        self.url = None
+        self.response = None
+        self.__result = None
+
+    def set_result(self, value):
+        self.__result = value
+
+    def result(self):
+        return self.__result
+
+class ComputationRequestBuilder:
+    def __init__(self, recording, frame):
+        self.path_template = None
+        self.recording = recording
+        self.frame = frame
+        self.__resource = f"./computation/{recording}/{frame}"
+
+    def build(self, size=None, direction=None, fov=None, x=None, y=None):
+        data = {}
+        if size:
+            data["size"] = str(size.width) + 'x' + str(size.height)
+        if direction:
+            data["yaw"] = direction.yaw
+            data["pitch"] = direction.pitch
+        if fov:
+            data["hor_fov"] = fov
+        if x:
+            data["x"] = x
+        if y:
+            data["y"] = y
+        url_values = urllib.parse.urlencode(data)
+        url = urllib.parse.urljoin(self.__resource, "?" + url_values)
+        return ComputationRequest(self, url, size, direction, fov, x, y)
+
+class ComputationProvider:
+    @dataclass(frozen=True)
+    class Result:
+        data: io.BytesIO
+
+    def fetch(self, computation_request):
+        return json.loads(self.Result(io.BytesIO(computation_request.result())).data.getvalue())

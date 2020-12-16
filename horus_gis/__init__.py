@@ -8,9 +8,9 @@ import numpy
 import pymap3d
 import math
 import argparse
+from typing import NamedTuple
 from ast import literal_eval
 from scipy.spatial.transform import Rotation
-
 
 def angle_between(v1, v2, up=numpy.array((0, 0, 1))):
     """ Returns the angle in radians between vectors 'v1' and 'v2'
@@ -97,3 +97,66 @@ class CameraModel(EnuModel):
     def look_at_angle(self, location):
         enu_location = self.to_enu(location)
         return math.degrees(angle_between(self.orientation, enu_location))
+
+
+class PositionVector(NamedTuple):
+    lat: float
+    lon: float
+    alt: float
+    yaw: float
+    pitch: float
+
+class Geographic:
+    @staticmethod
+    def __normalize(v):
+        norm = numpy.linalg.norm(v)
+        if norm == 0: 
+            return v
+        return v / norm
+
+    @staticmethod
+    def __get_line(lat, lon, alt, bearing, pitch):
+        p = pymap3d.geodetic2ecef(lat, lon, alt)
+
+        d = numpy.array([math.cos(math.radians(pitch)) * math.sin(math.radians(bearing)),
+                        math.cos(math.radians(pitch)) * math.cos(math.radians(bearing)),
+                        math.sin(math.radians(pitch))])
+
+        m = numpy.array([[-1 * math.sin(math.radians(lon)), 
+                        -1 * math.sin(math.radians(lat)) * math.cos(math.radians(lon)), 
+                        math.cos(math.radians(lat)) * math.cos(math.radians(lon))], 
+                        [math.cos(math.radians(lon)), 
+                        -1 * math.sin(math.radians(lat)) * math.sin(math.radians(lon)), 
+                        math.cos(math.radians(lat)) * math.sin(math.radians(lon))],
+                        [0, math.cos(math.radians(lat)), math.sin(math.radians(lat))]])
+
+        d = m.dot(d)
+        d = Geographic.__normalize(d)
+
+        return p, d
+
+    @staticmethod
+    def __get_point(lines):
+        m = numpy.zeros([3,3])
+        left = numpy.zeros([3,3])
+        right = numpy.zeros([3])
+
+        for origin, direction in lines:
+            m = numpy.identity(3) - \
+                numpy.column_stack([numpy.array([direction * direction[0]]).T, 
+                numpy.array([direction * direction[1]]).T, 
+                numpy.array([direction * direction[2]]).T])
+            left += m
+            right += m.dot(origin)
+
+        output = numpy.linalg.inv(left).dot(right)
+
+        return numpy.array(pymap3d.ecef2geodetic(*output))
+    
+    @staticmethod
+    def triangulate(pos_vectors):
+        """ Triangulate position based on at least 3 position vectors """
+        lines = []
+        for i in pos_vectors:
+            lines.append(Geographic.__get_line(*i))
+        return Geographic.__get_point(lines)

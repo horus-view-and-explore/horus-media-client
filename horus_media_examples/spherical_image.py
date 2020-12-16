@@ -3,13 +3,13 @@
 import psycopg2
 
 from horus_db import Frames, Frame
-from horus_media import Client, ImageRequestBuilder, ImageProvider, Mode, Size, Direction
+from horus_media import Client, ImageRequestBuilder, ImageProvider, Size, Direction
 
 # This example shows how to request a spherical image
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb  port=5433")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
 
 connection = get_connection()
 frames = Frames(connection)
@@ -24,13 +24,12 @@ if frame is None:
     exit()
 
 # Set parameters
-mode = Mode.spherical
 size = Size(1024, 1024)
-direction = Direction(yaw = -45, pitch = -20)
+direction = Direction(yaw = 45, pitch = -20)
 
 # Get the image
 request_builder = ImageRequestBuilder(frame.recordingid, frame.uuid)
-request = client.fetch(request_builder.build(mode, None, None, size, direction))
+request = client.fetch(request_builder.build_spherical(size, direction))
 result = image_provider.fetch(request)
 
 # Save the file

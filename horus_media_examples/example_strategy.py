@@ -149,8 +149,8 @@ for location in args.target:
                     "stitch": result})
 
             if mode == Mode.spherical.name:
-                request = client.fetch(requestBuilder.build(
-                    mode, None, None, size, Direction(angle, 0)))
+                request = client.fetch(requestBuilder.build_spherical(
+                    size, Direction(angle, 0), horizontal_fov))
                 result = image_provider.fetch(request, size.width, size.height)
                 if temp_path:
                     filename = temp_path + "spherical_{}.jpg".format(frame.index)
@@ -161,8 +161,8 @@ for location in args.target:
                     "stitch": result})
 
             if mode == Mode.orthographic.name:
-                request = client.fetch(requestBuilder.build(
-                    mode, None, None, size, None, geometry))
+                request = client.fetch(requestBuilder.build_orthographic(size, geometry))
+                                                            
                 result = image_provider.fetch(request)
                 if temp_path:
                     filename = temp_path + "orthographic_{}.tif".format(frame.index)
