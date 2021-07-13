@@ -6,8 +6,6 @@ import sys
 import logging
 import itertools
 
-sys.path.insert(0, "../")
-
 from horus_db import Frames, Frame
 from horus_media import ImageRequestBuilder, ImageProvider, Size, ComputationProvider
 

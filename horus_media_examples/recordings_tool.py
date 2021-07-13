@@ -3,8 +3,6 @@
 import psycopg2
 import sys
 
-sys.path.insert(0, "../")
-
 from horus_db import Frames, Recordings, Frame, Recording
 import util
 

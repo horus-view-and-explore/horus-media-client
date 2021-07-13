@@ -7,8 +7,6 @@ import csv
 import logging
 import itertools
 
-sys.path.insert(0, "../")
-
 from horus_db import Frames, Frame
 from horus_media import Client, ImageRequestBuilder, ImageProvider, Size, Direction, \
     ComputationRequestBuilder, ComputationProvider
