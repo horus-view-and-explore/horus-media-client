@@ -141,7 +141,9 @@ for location in args.target:
                 result = image_provider.combine(
                     requests, Scales.Px_1024.size, Scales.Px_1024.size)
                 if temp_path:
-                    filename = temp_path + "stitched_{}.jpg".format(frame.index)
+                    filename = temp_path + \
+                        "stitched_{}_{}.jpg".format(
+                            frame.recordingid,  frame.index)
                 results.append({
                     "frame": frame,
                     "angle": angle,
@@ -153,7 +155,8 @@ for location in args.target:
                     size, Direction(angle, 0), horizontal_fov))
                 result = image_provider.fetch(request, size.width, size.height)
                 if temp_path:
-                    filename = temp_path + "spherical_{}.jpg".format(frame.index)
+                    filename = temp_path + "spherical_{}_{}.jpg".format(
+                        frame.recordingid,  frame.index)
                 results.append({
                     "frame": frame,
                     "angle": angle,
@@ -165,7 +168,8 @@ for location in args.target:
                                                             
                 result = image_provider.fetch(request)
                 if temp_path:
-                    filename = temp_path + "orthographic_{}.tif".format(frame.index)
+                    filename = temp_path + "orthographic_{}_{}.tif".format(
+                        frame.recordingid,  frame.index)
                 results.append({
                     "frame": frame,
                     "angle": angle,

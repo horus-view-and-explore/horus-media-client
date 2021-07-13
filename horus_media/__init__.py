@@ -455,4 +455,9 @@ class ComputationProvider:
         data: io.BytesIO
 
     def fetch(self, computation_request):
-        return json.loads(self.Result(io.BytesIO(computation_request.result())).data.getvalue())
+        try:
+            result = self.Result(io.BytesIO(
+                computation_request.result())).data.getvalue()
+            return json.loads(result)
+        except json.decoder.JSONDecodeError as error:
+            return {"error": error}

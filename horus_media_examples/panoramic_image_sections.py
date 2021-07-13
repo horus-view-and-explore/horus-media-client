@@ -9,7 +9,7 @@ from horus_media import Client, ImageRequestBuilder, ImageProvider, Mode, Scales
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb port=5433")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
 
 connection = get_connection()
 frames = Frames(connection)

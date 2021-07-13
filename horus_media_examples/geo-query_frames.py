@@ -8,7 +8,7 @@ from horus_db import Frames, Frame
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb  port=5433")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
 
 connection = get_connection()
 frames = Frames(connection)
