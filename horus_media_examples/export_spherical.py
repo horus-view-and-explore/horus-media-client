@@ -12,7 +12,7 @@ from horus_media import Client, ImageRequestBuilder, ImageProvider, Size, Direct
     ComputationRequestBuilder, ComputationProvider
 from horus_gis import PositionVector, Geographic
 
-import util
+from . import util
 
 
 # Comand line input handling

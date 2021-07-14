@@ -4,7 +4,7 @@ import psycopg2
 import sys
 
 from horus_db import Frames, Recordings, Frame, Recording
-import util
+from . import util
 
 # This example shows how to iterate over all the recordings
 

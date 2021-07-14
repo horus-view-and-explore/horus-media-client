@@ -9,7 +9,7 @@ import itertools
 from horus_db import Frames, Frame
 from horus_media import ImageRequestBuilder, ImageProvider, Size, ComputationProvider
 
-import util
+from . import util
 
 
 # Comand line input handling
