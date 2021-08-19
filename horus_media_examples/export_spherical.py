@@ -29,6 +29,8 @@ parser.add_argument("--limit", metavar=("NUMBER"), type=int,
                     help="maximum number of frames")
 parser.add_argument("-r", "--recording", metavar="ID",
                     nargs='*', type=int, help="recording id")
+parser.add_argument("-p", "--pitch", type=float, default=(0),
+                    help="The pitch in degrees used for the orientation of the output")
 
 
 args = parser.parse_args()
@@ -61,14 +63,15 @@ computation_provider = ComputationProvider()
 size = Size(args.size[0], args.size[1])  # defaults to (1024px, 1024px)
 horizontal_fov = args.horizontal_fov  # defaults to 90 deg
 overlap = args.overlap  # 20deg
+pitch = args.pitch  # deg
 recording_id = tuple(args.recording) if args.recording != None else None
 
 displacement = horizontal_fov - overlap
 
 directions = {
-    "right": Direction(yaw=displacement, pitch=0),
-    "center": Direction(yaw=0, pitch=0),
-    "left": Direction(yaw=-displacement, pitch=0),
+    "right": Direction(yaw=displacement, pitch=pitch),
+    "center": Direction(yaw=0, pitch=pitch),
+    "left": Direction(yaw=-displacement, pitch=pitch),
 }
 
 csv_header = [
