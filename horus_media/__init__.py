@@ -289,28 +289,28 @@ class ImageRequestBuilder:
 
     def build(self, mode=None, scale=None, section=None, size=None, direction=None, fov=None, cams=None, geometry=None):
         data = {}
-        if mode:
+        if mode is not None:
             data["mode"] = mode
-        if scale:
+        if scale is not None:
             data["scale"] = scale.id
-        if section:
+        if section is not None:
             data["section"] = section.index
-        if size:
+        if size is not None:
             data["size"] = str(size.width) + 'x' + str(size.height)
-        if direction:
+        if direction is not None:
             data["yaw"] = direction.yaw
             data["pitch"] = direction.pitch
-        if fov:
+        if fov is not None:
             data["hor_fov"] = fov
-        if cams:
+        if cams is not None:
             data["cams"] = cams
-        if geometry:
+        if geometry is not None:
             data["scale"] = geometry.scale
             data["geom_width"] = geometry.width
             data["geom_height"] = geometry.height
             data["geom_dist"] = geometry.distance
             data["geom_shift"] = geometry.shift
-            if geometry.altitude:
+            if geometry.altitude is not None:
                 data["alti_next"] = geometry.altitude
         url_values = urllib.parse.urlencode(data)
         url = urllib.parse.urljoin(self.__resource, "?" + url_values)
@@ -434,16 +434,16 @@ class ComputationRequestBuilder:
 
     def build(self, size=None, direction=None, fov=None, x=None, y=None):
         data = {}
-        if size:
+        if size is not None:
             data["size"] = str(size.width) + 'x' + str(size.height)
-        if direction:
+        if direction is not None:
             data["yaw"] = direction.yaw
             data["pitch"] = direction.pitch
-        if fov:
+        if fov is not None:
             data["hor_fov"] = fov
-        if x:
+        if x is not None:
             data["x"] = x
-        if y:
+        if y is not None:
             data["y"] = y
         url_values = urllib.parse.urlencode(data)
         url = urllib.parse.urljoin(self.__resource, "?" + url_values)
