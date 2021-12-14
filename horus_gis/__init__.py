@@ -84,6 +84,12 @@ class EnuModel:
 
     def get_heading(self, point):
         return math.degrees(angle_between(EnuModel.north, point))
+    
+    def get_direction(self, point):
+        yaw = math.degrees(math.atan2(*point[:2]))
+        r = Rotation.from_euler('z', yaw, degrees=True)
+        pitch = 90 - math.degrees(math.atan2(*(r.apply(point)[1:3])))
+        return [yaw, pitch]
 
 
 class CameraModel(EnuModel):
@@ -91,8 +97,14 @@ class CameraModel(EnuModel):
         super(CameraModel, self).__init__(origin)
         self.orientation = self.to_orientation(-heading)
 
+    @staticmethod
+    def with_leverarms(origin, heading, leverarms):
+        enu = EnuModel(origin)
+        r = Rotation.from_euler('z', -heading + 90.0, degrees=True)
+        return CameraModel(enu.to_geodetic(r.apply(leverarms)), heading)
+
     def look_at(self, location):
-        return self.to_enu(location)
+        return self.get_direction(self.to_enu(location))
 
     def look_at_angle(self, location):
         enu_location = self.to_enu(location)

@@ -9,6 +9,13 @@ An [Horus Media Server](https://horus.nu/horus-geo-suite/) client python library
 
 Interactive examples
 
+### Spherical camera
+This example shows how a series _minimum of 3_ of geo referenced pixels `GeoReferencedPixel`
+obtained from a spherical image are used to calculate an accurate GeographicLocation for a specific label.
+```
+python -m horus_media_examples.spherical_camera --help
+```
+
 ### Recordings tool
 This example can be used to list published recordings.
 ```

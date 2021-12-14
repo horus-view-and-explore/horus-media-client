@@ -6,7 +6,7 @@ import datetime
 
 import psycopg2
 
-from horus_db import Frames, Recordings, Frame, Recording
+from horus_db import Frames, Recordings, Frame, Recording, RecordingSetups
 from horus_db import Iterator
 
 
@@ -19,15 +19,53 @@ class TestRecordings(unittest.TestCase):
 
     def test_get(self):
         connection = get_connection()
-        recording_id = 613
+        recording_id = 5
         recordings = Recordings(connection)
         recording = Recording(recordings.get(recording_id))
-        self.assertEqual(recording.id, 613)
+        self.assertEqual(recording.id, 5)
         self.assertEqual(
-            recording.directory, "D:\\Recordings\\Porject A\\Sub Project B\\Recording_01-01-2001_00-34-45")
+            recording.directory, "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08")
         self.assertEqual(recording.bounding_box,
-                         "BOX(5.89323166666667 52.6755798266667,5.89833665333333 52.6773494)")
+                         "BOX(4.461778927 51.892380339,4.497248851 51.930770724)")
         self.assertEqual(recording.file_format, 1)
+
+        self.assertEqual(recording.setup, None)
+        recordings.get_setup(recording)
+        setup = recording.setup
+        self.assertEqual(setup.camera_height, 2.49)
+        self.assertEqual(setup.lever_arm_x, 0)
+        self.assertEqual(setup.lever_arm_y, 0)
+        self.assertEqual(setup.lever_arm_z, 0)
+        self.assertEqual(setup.id, 5)
+        lever_arm = setup.lever_arm
+        self.assertEqual(lever_arm.x, 0)
+        self.assertEqual(lever_arm.y, 0)
+        self.assertEqual(lever_arm.z, 0)
+
+    def test_get_with_directory(self):
+        connection = get_connection()
+        recordings = Recordings(connection)
+        results = list(Recording.query(
+            recordings, directory_like="Rotterdam360", order_by="id"))
+
+        self.assertEqual(len(results), 2)
+        self.assertEqual(results[0].id, 4)
+        self.assertEqual(
+            results[0].directory, "D:\\Recordings\\DemoData\\Rotterdam360\\GoProMax\\Recording2019-12-18_12-53-06")
+
+        self.assertEqual(results[1].id, 5)
+        self.assertEqual(
+            results[1].directory, "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08")
+
+    def test_get_with_directory_single(self):
+        connection = get_connection()
+        recordings = Recordings(connection)
+        recording = next(Recording.query(
+            recordings, directory_like="Rotterdam360\\\\Ladybug5plus"))
+
+        self.assertEqual(recording.id, 5)
+        self.assertEqual(
+            recording.directory, "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08")
 
     def test_query(self):
         connection = get_connection()
@@ -43,7 +81,24 @@ class TestRecordings(unittest.TestCase):
             iterator_count += 1
             self.assertEqual(len(result), description_len)
 
-        self.assertEqual(cursor.rowcount, 2012)
+        self.assertGreater(cursor.rowcount, 3)
+        self.assertEqual(iterator_count, cursor.rowcount)
+
+    def test_query_setups(self):
+        connection = get_connection()
+        setups = RecordingSetups(connection)
+        cursor = setups.all()
+        self.assertIsNotNone(cursor)
+
+        description_len = len(cursor.description)
+        self.assertEqual(description_len, 7)
+
+        iterator_count = 0
+        for result in Iterator(cursor):
+            iterator_count += 1
+            self.assertEqual(len(result), description_len)
+
+        self.assertGreater(cursor.rowcount, 3)
         self.assertEqual(iterator_count, cursor.rowcount)
 
 

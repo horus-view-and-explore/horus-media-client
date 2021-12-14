@@ -2,6 +2,8 @@
 # Copyright(C) 2019, 2020, 2021 Horus View and Explore B.V.
 
 import logging
+from typing import NamedTuple
+
 
 class Table:
     attributes = {}
@@ -41,6 +43,29 @@ class Table:
         return f"{cls.__name__}({attrs})"
 
 
+class LeverArm(NamedTuple):
+    x: float
+    y: float
+    z: float
+
+
+class RecordingSetup(Table):
+    attributes = {
+        "camera_height": "cameraHeight",
+        "lever_arm_x": "leverArmX",
+        "lever_arm_y": "leverArmY",
+        "lever_arm_z": "leverArmZ",
+        "id": "recording_id",
+    }
+    repr_attributes = ["id", "camera_height", "lever_arm"]
+
+    @property
+    def lever_arm(self):
+        return LeverArm(self.leverArmX,
+                        self.leverArmY,
+                        self.leverArmZ)
+
+
 class Recording(Table):
     attributes = {
         "directory": "recordingdirectory",
@@ -48,6 +73,8 @@ class Recording(Table):
         "file_format": "fileformat",
     }
     repr_attributes = ["id", "boundingbox"]
+    setup: RecordingSetup = None
+
 
 class Frame(Table):
     attributes = {
@@ -64,6 +91,22 @@ class Frame(Table):
             self.altitude)
 
 
+class RecordingSetups:
+    def __init__(self, connection):
+        self.__connection = connection
+
+    def all(self):
+        cursor = self.__connection.cursor()
+        cursor.execute('SELECT * FROM "MoviePlayer_recordingsetup"')
+        return cursor
+
+    def get(self, id):
+        cursor = self.__connection.cursor()
+        cursor.execute("""SELECT "cameraHeight", "leverArmX", "leverArmY", "leverArmZ", "recording_id"
+FROM "MoviePlayer_recordingsetup" WHERE recording_id = %s;""", (id,))
+        return cursor
+
+
 class Recordings:
     def __init__(self, connection):
         self.__connection = connection
@@ -73,6 +116,12 @@ class Recordings:
         cursor.execute("""SELECT id, recordingdirectory, boundingbox, fileformat
 FROM recordings WHERE id = %s;""", (id,))
         return cursor
+
+    def get_setup(self, recording):
+        cursor = self.__connection.cursor()
+        cursor.execute("""SELECT "cameraHeight", "leverArmX", "leverArmY", "leverArmZ", "recording_id"
+FROM "MoviePlayer_recordingsetup" WHERE recording_id = %s;""", (recording.id,))
+        recording.setup = RecordingSetup(cursor)
 
     def all(self):
         cursor = self.__connection.cursor()
@@ -100,6 +149,10 @@ FROM recordings""")
                     value = (value,)
                 where_clause.append(f"{arg}" + " IN %s")
                 params.append(value)
+                continue
+            if arg == "directory_like":
+                where_clause.append("recordingdirectory LIKE %s")
+                params.append(f"%{value}%")
                 continue
             if arg == "limit":
                 tail.append("limit %s")
