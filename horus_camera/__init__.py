@@ -115,7 +115,9 @@ class GeoReferencedPixel(ViewParameterizedPixel):
 
     In the case of the SphericalImage, the function project_pixel_on_ground_surface 
     adds constraints on the altitude coordinate, thus allowing for an estimation
-    on the GeographicLocation. 
+    on the GeographicLocation.
+
+    The distance is the ground distance from camera to geo_location.
     """
     distance: float
     geo_location: GeographicLocation
