@@ -95,9 +95,9 @@ class TestClient(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestClient, self).__init__(*args, **kwargs)
 
-        recording_id = 871
-        frame_uuid = "44d25183-cc3e-4c8b-8661-8c286e71b2dc"
-        host_url = "http://webplayer.horus.nu/"
+        recording_id = 5
+        frame_uuid = "1708a7fb-af45-41b2-a0c1-1b9962f58ac0"
+        host_url = "http://pocms.horus.nu:5050/web/"
 
         self.grid = Grid()
         self.request_builder = ImageRequestBuilder(recording_id, frame_uuid)

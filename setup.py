@@ -21,7 +21,7 @@ with open(path.join(here, 'README.md'), encoding='utf-8') as f:
 setup(
     name='horus-media-client',
 
-    version='0.6.0',
+    version='0.6.1',
 
     description='Horus Media Server Client',
 

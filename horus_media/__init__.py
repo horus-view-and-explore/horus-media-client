@@ -10,6 +10,7 @@ from enum import Enum
 import urllib.parse
 import io
 import math
+import time
 import json
 import logging
 import http.client
@@ -213,18 +214,29 @@ class Geometry:
     altitude: float
 
 class Client:
-    def __init__(self, url="http://localhost:5050/web/"):
+    def __init__(self, url="http://localhost:5050/web/", timeout=4):
         self.url = url
         self.__parsed_url = urllib.parse.urlparse(url)
         self.__connection = http.client.HTTPConnection(
-            self.__parsed_url.hostname, self.__parsed_url.port, timeout=4)
+            self.__parsed_url.hostname, self.__parsed_url.port, timeout=timeout)
         self.__connection.connect()
+        self.attempts = 5
+        self.attempts_interval = 3 #seconds
 
     def fetch(self, request):
         request.url = urllib.parse.urljoin(
             self.__parsed_url.path, request.resource)
         self.__connection.request("GET", request.url)
-        response = self.__connection.getresponse()
+        attempts = self.attempts
+        while attempts > 0:
+            attempts -= 1
+            try:
+                response = self.__connection.getresponse()
+                attempts = 0
+            except Exception as exception:
+                logging.error(f'{exception}. Requesting "{request.url}".')
+                logging.error(f'New attempt in {self.attempts_interval}s .')
+                time.sleep(self.attempts_interval)
 
         request.response = response
         result = response.read()

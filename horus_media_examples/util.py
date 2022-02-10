@@ -33,6 +33,10 @@ def add_database_arguments(parser):
 def add_server_arguments(parser):
     parser.add_argument("-s", "--server",  metavar="URL", type=str, default="http://localhost:5050/web/",
                         help="Horus Media Server endpoint")
+    parser.add_argument("-st", "--server-timeout",  metavar="SECONDS", type=int, default=4,
+                        help="Horus Media Server timeout in seconds")
+    parser.add_argument("-sa", "--server-attempts",  metavar="ATTEMPTS", type=int, default=5,
+                        help="Horus Media Server number of attempts on connection failure")
 
 
 def add_size_argument(parser, default=(1024, 1024)):
@@ -51,6 +55,7 @@ def add_geometry_arguments(parser):
                         help="geometry distance (orthographic)")
     parser.add_argument("-gs", "--geom-shift", type=float, default=0,
                         help="geometry shift (orthographic)")
+
 
 def get_database_connection_string(args):
     db_params = [("host", args.db_host),
@@ -72,14 +77,16 @@ def get_connection(args):
         exit()
 
 
-def get_geometry(args, altitude_next = None):
+def get_geometry(args, altitude_next=None):
     return Geometry(args.geom_scale, args.geom_width,
                     args.geom_height, args.geom_dist, args.geom_shift, altitude_next)
 
 
 def get_client(args):
     try:
-        return Client(args.server)
+        client = Client(args.server, args.server_timeout)
+        client.attempts = args.server_attempts
+        return client
     except OSError as exception:
         logging.error(f"{exception}. Connecting to server {args.server}")
         exit()
