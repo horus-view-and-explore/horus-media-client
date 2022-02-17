@@ -224,6 +224,11 @@ class Frames:
                 where_clause.append(
                     f"ST_DWithin(geom::geography, {st_point}::geography, {distance})")
                 continue
+            if arg == "time_interval":
+                start, end = value
+                orderby_clause.append("stamp")
+                where_clause.append(f"stamp BETWEEN '{start}' AND '{end}'")
+                continue
             if arg in select_clause:
                 if type(value) != tuple:
                     value = (value,)
