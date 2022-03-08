@@ -11,6 +11,7 @@ import argparse
 from typing import NamedTuple
 from ast import literal_eval
 from scipy.spatial.transform import Rotation
+from enum import Enum
 
 def angle_between(v1, v2, up=numpy.array((0, 0, 1))):
     """ Returns the angle in radians between vectors 'v1' and 'v2'
@@ -47,7 +48,7 @@ def geoPointParser(string):
 class EnuModel:
     """East North Up spatial of reference
 
-    Conversions bewteen ENU and Geodetic."""
+    Conversions between ENU and Geodetic."""
 
     east = numpy.array((1, 0, 0))
     north = numpy.array((0, 1, 0))
@@ -172,3 +173,121 @@ class Geographic:
         for i in pos_vectors:
             lines.append(Geographic.__get_line(*i))
         return Geographic.__get_point(lines)
+
+
+
+class SchemaProvider:
+    ### Provides database schemas ###
+    class Geometry:
+        class Type(Enum):
+            POINT_2D = 1
+            POINT_3D = 2
+        ### placeholder geometry class ###
+        type:Type
+        def __init__(self,type:Type):
+            self.type = type
+
+        def __repr__(self):
+            if self.type == self.Type.POINT_2D:
+                return 'Point'
+            if self.type == self.Type.POINT_3D:
+                return '3D Point'
+                
+    class AutoIncrement:
+        def __init__(self):
+            pass
+
+    class Field:
+        name:str
+        description:str
+        type
+
+        def __init__(self, name:str, description,type):
+            self.name = name
+            self.description = description
+            self.type = type
+
+        def __repr__(self):
+            cls = type(self)
+            return f"{cls.__name__}({self.name}, {getattr(self.type, '__name__', self.type)})"
+
+    class Schema:
+        fields=[]
+        name:str
+
+        def __init__(self, name: str):
+            self.name = name
+
+    @staticmethod
+    def merge(schema_a, schema_b):
+        schema = SchemaProvider.Schema(schema_a.name + " / " + schema_b.name)
+        schema.fields = schema_a.fields + schema_b.fields
+        return schema
+
+    @staticmethod
+    def single_measurement():
+        schema = SchemaProvider.Schema("Single measurement schema")
+        schema.fields =  [
+            SchemaProvider.Field("geometry","Center of the detection projected on the surface.",
+                                 SchemaProvider.Geometry(SchemaProvider.Geometry.Type.POINT_3D)),
+
+            #Frame fields (viewpoint information)
+            SchemaProvider.Field("rec_id", "The id of the recording.", int),
+            SchemaProvider.Field("frame_idx", "The index of the frame.", int),
+            SchemaProvider.Field("azimuth", "Heading/Azimuth (true north) of movement of the camera.", float),
+            SchemaProvider.Field("usr_id", "An unique id for this record.", int),
+
+
+            #SchemaProvider.Field("camera_geom", "Position of the camera.",
+            #                     SchemaProvider.Geometry(SchemaProvider.Geometry.Type.POINT_3D)),
+            #Camera fields (rendering parameters)
+            SchemaProvider.Field("cam_lat", "The latitude of the camera.", float),
+            SchemaProvider.Field("cam_lon", "The longitude of the camera.", float),
+            SchemaProvider.Field("cam_alt", "The altitude of the camera.", float),
+            SchemaProvider.Field("cam_fov", "The field of view of the spherical camera.",float),
+            SchemaProvider.Field("cam_yaw", "The yaw of the spherical camera.",float),
+            SchemaProvider.Field("cam_pitch", "The pitch of the spherical camera.",float),
+            SchemaProvider.Field("cam_width", "The width of the spherical camera.",int),
+            SchemaProvider.Field("cam_height", "The height of the spherical camera.",int),
+
+            # Detection fields
+            SchemaProvider.Field("dt_class", "The detection class/type ID.",int),
+            SchemaProvider.Field("dt_name", "The detection name.",str),
+            SchemaProvider.Field("dt_x", "The highest left pixel of the detection.",int),
+            SchemaProvider.Field("dt_y", "The highest top pixel of the detection.",int),
+            SchemaProvider.Field("dt_width", "The width of the detection.",int),
+            SchemaProvider.Field("dt_height", "The height of the detection.",int),
+            SchemaProvider.Field("dt_conf", "The confidence.",float),
+            SchemaProvider.Field("dt_dist", "The surface distance in meters to the detection.",float),
+            SchemaProvider.Field("dt_px_x", "The pixel x coordinate of the detection(could be centroid x).", int),
+            SchemaProvider.Field("dt_px_y", "The pixel y coordinate of the detection (could be centroid y).", int),
+            SchemaProvider.Field("dt_yaw", "The geographical yaw of the camera wrt the detection.", float),
+            SchemaProvider.Field("dt_pitch", "The geographical pitch of the camera wrt the detection.", float),
+            # 
+            SchemaProvider.Field("surf_px_x","The pixel x coordinate of the surface(could be centroid x).",int),
+            SchemaProvider.Field("surf_px_y","The pixel y coordinate of the surface (could be centroid y).",int),
+            SchemaProvider.Field("surf_yaw","The geographical yaw of the camera wrt the surface.",float),
+            SchemaProvider.Field("surf_pitch","The geographical pitch of the camera wrt the surface.",float)
+
+        ]
+
+        return schema
+
+    @staticmethod
+    def clustering():
+        schema = SchemaProvider.Schema("Clustering schema")
+        schema.fields = [
+            SchemaProvider.Field("clstr_id", "The cluster id of the cluster.", int),
+            SchemaProvider.Field("clstr_conf", "Clustering confidence.", float),
+        ]
+
+        return schema
+
+    def geometry_3dpoint(self):
+        schema = SchemaProvider.Schema("Geometry 3dPoint")
+        schema.fields = [
+            SchemaProvider.Field("geometry", "Basic 3D Point geometry.",
+                                 SchemaProvider.Geometry(SchemaProvider.Geometry.Type.POINT_3D))
+        ]
+
+        return schema

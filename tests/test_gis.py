@@ -4,7 +4,7 @@
 import unittest
 
 import numpy
-from horus_gis import EnuModel, CameraModel
+from horus_gis import EnuModel, CameraModel, SchemaProvider
 
 
 class TestEnuModel(unittest.TestCase):
@@ -48,7 +48,18 @@ class TestCameraModel(unittest.TestCase):
         camera_model = CameraModel(camera_location, camera_heading)
         look_at_angle = camera_model.look_at_angle(look_at_location)
 
-        self.assertEqual(look_at_angle, -87.49439415551622, "look_at_angle")
+        diff = look_at_angle - 87.49439415551622
+
+        self.assertTrue(diff < 0.001, "look_at_angle")
+
+
+class TestSchemaProvider(unittest.TestCase):
+
+    def single_measurement_schema(self):
+        sp = SchemaProvider()
+        schema = sp.single_measurement()
+        self.assertEqual(23, len(schema))
+
 
 if __name__ == '__main__':
     unittest.main()

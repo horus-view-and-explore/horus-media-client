@@ -89,4 +89,10 @@ def get_client(args):
         return client
     except OSError as exception:
         logging.error(f"{exception}. Connecting to server {args.server}")
-        exit()
+        exit(1)
+
+
+def sample_script_header(name):
+    if name == "__main__":
+        print(f"This module is a sample script. It cannot run as an interactive example.")
+        exit(1)

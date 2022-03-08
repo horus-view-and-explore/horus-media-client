@@ -4,11 +4,16 @@ import psycopg2
 
 from horus_db import Frames, Frame
 
+from .. import util
+util.sample_script_header(__name__)
+
 # This example shows how to get a specific frame
+
 
 def get_connection():
     return psycopg2.connect(
         "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
+
 
 connection = get_connection()
 frames = Frames(connection)

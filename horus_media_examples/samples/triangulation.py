@@ -11,13 +11,17 @@ from horus_media import Client, ImageRequestBuilder, ImageProvider, ComputationR
                                 ComputationProvider, Size, Direction
 from horus_gis import PositionVector, Geographic
 
-# This example shows how to use triangulation to get geographic positions 
+from .. import util
+util.sample_script_header(__name__)
+
+# This example shows how to use triangulation to get geographic positions
 # on boxes drawn by the user on 3 consecutive frames
 
 connection = psycopg2.connect("dbname=HorusWebMoviePlayer user=postgres password=horusweb")
 client = Client()
 image_provider = ImageProvider()
 computation_provider = ComputationProvider()
+
 
 def main():
     no_of_frames = 3

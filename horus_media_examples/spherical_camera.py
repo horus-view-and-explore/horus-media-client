@@ -7,7 +7,59 @@ import itertools
 from horus_media import Size
 from horus_camera import SphericalCamera, Pixel, SphericalImage, GeoReferencedPixel, GeographicLocation
 from horus_db import Frames, Recordings, Frame, Recording
+from horus_gis import SchemaProvider
+
 from . import util
+
+
+#------- If geopandas & pandora are installed
+database = None
+try:
+    from horus_geopandas import HorusGeoDataFrame
+    import geopandas as gpd
+
+    sp = SchemaProvider()
+    database = HorusGeoDataFrame(sp.single_measurement())
+
+except ModuleNotFoundError:
+    pass
+
+def fill_record(record,grp: GeoReferencedPixel, camera:SphericalCamera, image:SphericalImage):
+    print("TEST--->", )
+    print("TEST--->",  image.get_geo_location_camera().lat)
+
+    # update geometry
+    record["geometry"] = geopandas.points_from_xy(x=[grp.geo_location.lon], y=[grp.geo_location.lat])
+    # Record
+    record["rec_id"] = grp.recording_id
+    record["frame_idx"] = grp.frame_index
+    #
+    record["cam_fov"] = camera.h_fov.value
+    record["cam_yaw"] = camera.yaw
+    record["cam_pitch"] = camera.pitch
+    record["cam_width"] = image.get_resolution().width
+    record["cam_height"] = image.get_resolution().height
+    record["cam_lat"] = image.get_geo_location_camera().lat
+    record["cam_lon"] = image.get_geo_location_camera().lon
+    record["cam_alt"] = image.get_geo_location_camera().alt
+    #
+    record["dt_class"] = 1234
+    record["dt_name"] = "pole"
+    record["dt_x"] = 12
+    record["dt_y"] = 12
+    record["dt_width"] = 13
+    record["dt_height"] = 13
+    record["dt_conf"] = 0.9
+    record["dt_surf_x"] = 13
+    record["dt_surf_y"] = 0
+    record["dt_dist"] = grp.distance
+    #
+    record["vp_px_x"] = grp.pixel_location.col
+    record["vp_px_y"] = grp.pixel_location.row
+    record["vp_yaw"] = grp.viewing_parameters.yaw
+    record["vp_pitch"] = grp.viewing_parameters.pitch
+
+
 
 # ----------    Overview  --------------
 #
@@ -114,6 +166,11 @@ for foi in frames_of_interest:
 
     for poi in foi[1]:
 
+        # -- obtain database
+        record = None
+        if database is not None:
+            record = database.new_frame()
+
         sp_camera.set_horizontal_fov(90)
         sp_camera.set_yaw(poi.yaw)
         sp_camera.set_pitch(poi.pitch)
@@ -134,6 +191,13 @@ for foi in frames_of_interest:
         spherical_image.store_geo_referenced_pixel(grp)
 
         list_of_images.append(spherical_image)
+
+        if record is not None:
+            fill_record(record,grp,sp_camera,spherical_image)
+            database.add_frame(record)
+
+    if database:
+        record = database.new_frame()
 
 # Step 6
 # Triangulate the labels
