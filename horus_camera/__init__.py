@@ -1,12 +1,20 @@
-
+from PIL import Image, ImageDraw
+from io import BytesIO
 import math
 import io
 
 from horus_db import Frame, Recording
 from horus_media import Client, ImageRequestBuilder, ImageRequest, ImageProvider, Size, Direction, \
     ComputationRequestBuilder, ComputationProvider, Rect
-from horus_gis import PositionVector, Geographic, CameraModel
+from horus_gis import GeographicLocation, RelativeLocation, PositionVector, Geographic, CameraModel
 
+horus_geometries_found = False
+
+try:
+    from horus_geometries import Geometry_proj
+    horus_geometries_found = True
+except:
+    pass
 
 class FieldOfView():
     value: float
@@ -17,51 +25,6 @@ class FieldOfView():
         self.value = value
         self.min = min
         self.max = max
-
-
-class GeographicLocation():
-    """GeographicLocation longitude,latitude,altitude
-
-    Geographic location refers to a position on the Earth. 
-    Your absolute geographic location is defined by two coordinates,
-    longitude and latitude. In the case of imagery, the altitude is added/required
-    to be able to georeference pixels from this imagery.
-
-    The reference system is that in which the recording has been stored in the database,
-    which is usually EPSG Projection 4326 - WGS 84. 
-    """
-    lat: float
-    lon: float
-    alt: float
-
-    def __init__(self, lon: float, lat: float, alt: float):
-        self.lon = lon
-        self.lat = lat
-        self.alt = alt
-
-    @staticmethod
-    def from_tuple(tuple_lon_lat_alt):
-        return GeographicLocation(
-            tuple_lon_lat_alt[0],
-            tuple_lon_lat_alt[1],
-            tuple_lon_lat_alt[2])
-
-class RelativeLocation():
-    """RelativeLocation, east, north, up
-    
-        The relative location in meters using the ENU coordinate system.
-    """
-    east: float
-    north: float
-    up: float
-
-    def __init__(self, east: float, north: float, up: float):
-        self.east = east
-        self.north = north
-        self.up = up
-
-    def location(self):
-        return [self.east, self.north, self.up]
 
 class Pixel():
     row: int
@@ -182,6 +145,7 @@ class Camera():
         """Places the camera at a specific frame """
         self.frame = frame
         self.recording = recording
+
         if recording.setup is not None:
             self.set_camera_height(recording.setup.camera_height)
 
@@ -355,7 +319,8 @@ class SphericalImage():
         camera_model = self.get_camera_model()
         grp.distance = ground_north_vector
         grp.relative_loc = RelativeLocation(*vector, -self.get_camera_height())
-        grp.geo_location = GeographicLocation(*camera_model.to_geodetic(grp.relative_loc.location()))
+        grp.geo_location = GeographicLocation(
+            *camera_model.to_geodetic(grp.relative_loc.location()))
 
         return grp
 
@@ -412,6 +377,8 @@ class SphericalCamera(Camera):
         """Construct a Spherical camera. """
         super().__init__()
         self.h_fov = FieldOfView(90.0, 1.0, 160.0)
+        self.set_pitch(0)
+        self.set_yaw(0)
 
     def set_pitch(self, pitch: float):
         """Adjust the camera's pitch
@@ -465,6 +432,84 @@ class SphericalCamera(Camera):
         self.set_yaw(yaw - self.frame.heading)
         self.set_pitch(pitch)
 
+    def look_at_all(self, geo_locations: [GeographicLocation], width: int):
+
+        if not horus_geometries_found:
+            raise Exception('Function not supported, requires horus_geometries.')
+
+        if self.recording.setup is not None:
+            camera_model = CameraModel.with_leverarms(self.frame.get_location(), self.frame.heading,
+                                                      self.recording.setup.lever_arm)
+        else:
+            camera_model = CameraModel(
+                self.frame.get_location(), self.frame.heading)
+
+        gp = Geometry_proj()
+        proj = gp.Projection(camera_model, False)
+
+        geom = gp.to_enu(gp.geographic_to_polygon(geo_locations), proj).geometry
+        c = geom.centroid
+        bearing = math.degrees(math.atan2(c.x, c.y))
+
+        geom = gp.rotate(geom, proj, math.degrees(bearing))
+        bb = gp.bounding_box(geom)
+        br, tl = [gp.to_point(p) for p in bb.exterior.coords[:-1:2]]
+        z = geom.exterior.coords[0][2]
+        c = bb.centroid
+        ct = gp.to_point([c.x, tl.y, z])
+        cb = gp.to_point([c.x, br.y, z])
+
+        vfov = camera_model.angle_between(*ct.coords, *cb.coords)
+        hfov = camera_model.angle_between([0, cb.y, cb.z], [max(abs(tl.x), br.x), cb.y, z]) * 2
+        pitch = camera_model.angle_between(*ct.coords, [0, 0, 1]) + vfov / 2
+        height = int(math.tan(math.radians(vfov) / 2) * width / math.tan(math.radians(hfov) / 2))
+
+        self.set_yaw(360 - self.frame.heading + bearing)
+        self.set_pitch(90 - pitch)
+        self.set_horizontal_fov(hfov)
+
+        return Size(width, height)
+
+    def crop_to_geometry(self, image:SphericalImage, geo_locations: [GeographicLocation], draw_geometry: bool = False) -> SphericalImage:
+        
+        if not horus_geometries_found:
+            raise Exception('Function not supported, requires horus_geometries.')
+
+        if self.recording.setup is not None:
+            camera_model = CameraModel.with_leverarms(self.frame.get_location(), self.frame.heading,
+                                            self.recording.setup.lever_arm)
+        else:
+            camera_model = CameraModel(
+                self.frame.get_location(), self.frame.heading)
+
+        size = image.image_request.size
+        computation_request_builder = ComputationRequestBuilder('project')
+        
+        points = []
+        for p in [*geo_locations, geo_locations[0]]:
+            y, p = camera_model.look_at([p.lon, p.lat, p.alt])
+            computation_request = image.nw_client.fetch(computation_request_builder.build(size, Direction(y - self.frame.heading, p), 
+                                        self.h_fov.value, direction0 = Direction(self.yaw, self.pitch)))
+            result = image.computation_provider.fetch(computation_request)
+            if 'error' in result:
+                print(result['error'])
+            else:
+                x, y = result.values()
+                points.append((x, y))
+
+        if len(points) > 0:
+            with Image.open(image.get_image()) as im:
+                if draw_geometry:
+                    draw = ImageDraw.Draw(im)
+                    for i in range(len(points) - 1):
+                        draw.line((points[i], points[i + 1]), fill=(12, 255, 36))
+
+                out = BytesIO()
+                im.crop(Geometry_proj().to_polygon(points).bounds).save(out, format="JPEG", quality=95)
+                image.result = ImageProvider.Result(out, [0, 0, size.width, size.height], size.width, size.height)
+
+        return image
+    
     def acquire(self, size: Size, manual_fetch: bool = False) -> SphericalImage:
         """Acquire a Spherical image from the current position/configuration of the camera"""
 

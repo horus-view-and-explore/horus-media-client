@@ -277,6 +277,9 @@ class ImageRequest:
 
     def result(self):
         return self.__result
+    def __repr__(self):
+        cls = type(self)
+        return f"{cls.__name__}({self.url})"
 
 
 class ImageRequestBuilder:
@@ -285,6 +288,10 @@ class ImageRequestBuilder:
         self.recording = recording
         self.frame = frame
         self.__resource = f"./images/{recording}/{frame}"
+
+    def __repr__(self):
+        cls = type(self)
+        return f"{cls.__name__}({self.__resource})"
 
     def build_spherical(self, size=None, direction=None, vof=None, cams=None):
         return self.build(Mode.spherical, None, None, size, direction, vof, cams, None)
@@ -420,13 +427,16 @@ class ImageProvider:
         return {}
 
 class ComputationRequest:
-    def __init__(self, builder, resource, size=None, direction=None, fov=None, x=None, y=None):
+    def __init__(self, builder, resource, size=None, direction=None, fov=None, x=None, y=None, direction0=None):
         self.local_file = None
         self.builder = builder
         self.resource = resource
         self.size = size
         self.direction = direction
         self.fov = fov
+        self.x = x
+        self.y = y
+        self.direction0 = direction0
         self.url = None
         self.response = None
         self.__result = None
@@ -438,28 +448,36 @@ class ComputationRequest:
         return self.__result
 
 class ComputationRequestBuilder:
-    def __init__(self, recording, frame):
+    def __init__(self, method, frame = None):
         self.path_template = None
-        self.recording = recording
+        self.method = method
         self.frame = frame
-        self.__resource = f"./computation/{recording}/{frame}"
+        self.__resource = f"./computation/{method}"
+        if frame != None:
+            self.__resource += f"/{frame}"
 
-    def build(self, size=None, direction=None, fov=None, x=None, y=None):
+    def build(self, size=None, direction=None, fov=None, x=None, y=None, direction0=None):
         data = {}
         if size is not None:
             data["size"] = str(size.width) + 'x' + str(size.height)
         if direction is not None:
             data["yaw"] = direction.yaw
             data["pitch"] = direction.pitch
+        else:
+            data["yaw"] = 0
+            data["pitch"] = 0
         if fov is not None:
             data["hor_fov"] = fov
         if x is not None:
             data["x"] = x
         if y is not None:
             data["y"] = y
+        if direction0 is not None:
+            data["yaw0"] = direction0.yaw
+            data["pitch0"] = direction0.pitch
         url_values = urllib.parse.urlencode(data)
         url = urllib.parse.urljoin(self.__resource, "?" + url_values)
-        return ComputationRequest(self, url, size, direction, fov, x, y)
+        return ComputationRequest(self, url, size, direction, fov, x, y, direction0)
 
 class ComputationProvider:
     @dataclass(frozen=True)

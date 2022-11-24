@@ -4,7 +4,6 @@
 import logging
 from typing import NamedTuple
 
-
 class Table:
     attributes = {}
     repr_attributes = ["id"]
@@ -223,6 +222,13 @@ class Frames:
                 orderby_clause.append("distance")
                 where_clause.append(
                     f"ST_DWithin(geom::geography, {st_point}::geography, {distance})")
+                continue
+            if arg == "distance":
+                point, operator, distance = value
+                st_point = f"ST_SetSRID(ST_Point({point[0]}, {point[1]}), 4326)"
+                where_clause.append(
+                    f"ST_Distance(geom::geography, {st_point}::geography) {operator}")
+                params.append(distance)
                 continue
             if arg == "time_interval":
                 start, end = value

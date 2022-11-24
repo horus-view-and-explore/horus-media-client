@@ -5,9 +5,9 @@ import sys
 import itertools
 
 from horus_media import Size
-from horus_camera import SphericalCamera, Pixel, SphericalImage, GeoReferencedPixel, GeographicLocation
+from horus_camera import SphericalCamera, Pixel, SphericalImage, GeoReferencedPixel
 from horus_db import Frames, Recordings, Frame, Recording
-from horus_gis import SchemaProvider
+from horus_gis import SchemaProvider, GeographicLocation
 
 from . import util
 

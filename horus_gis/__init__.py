@@ -19,8 +19,8 @@ def angle_between(v1, v2, up=numpy.array((0, 0, 1))):
     The angle is oriented according to the up vector.
     """
 
-    angle = numpy.arccos(numpy.dot(v1, v2) /
-                         (numpy.linalg.norm(v1) * numpy.linalg.norm(v2)))
+    angle = numpy.arccos(numpy.clip(numpy.dot(v1 / numpy.linalg.norm(v1), \
+                v2 / numpy.linalg.norm(v2)), -1.0, 1.0))
     if numpy.dot(numpy.cross(v1, v2), up) < 0:
         return -angle
     return angle
@@ -78,16 +78,22 @@ class EnuModel:
         return numpy.array([x for x in xyz_to_yxz(
             pymap3d.enu2geodetic(*point, *xyz_to_yxz(self.geodeticPoint)))])
 
-    def to_orientation(self, angle):
+    def rotate(self, point, angle):
         r = Rotation.from_euler('z', angle, degrees=True)
+        return r.apply(point)
+
+    def to_orientation(self, angle):
         # should use altitude ?
-        return r.apply(EnuModel.north)
+        return self.rotate(EnuModel.north, angle)
+
+    def angle_between(self, v1, v2):
+        return math.degrees(angle_between(v1, v2, [0, 0, 0]))
 
     def get_heading(self, point):
         return math.degrees(angle_between(EnuModel.north, point))
     
     def get_direction(self, point):
-        yaw = math.degrees(math.atan2(*point[:2]))
+        yaw = (math.degrees(math.atan2(*point[:2])) + 360) % 360
         r = Rotation.from_euler('z', yaw, degrees=True)
         pitch = 90 - math.degrees(math.atan2(*(r.apply(point)[1:3])))
         return [yaw, pitch]
@@ -111,6 +117,51 @@ class CameraModel(EnuModel):
         enu_location = self.to_enu(location)
         return math.degrees(angle_between(self.orientation, enu_location))
 
+
+class GeographicLocation():
+    """GeographicLocation longitude,latitude,altitude
+
+    Geographic location refers to a position on the Earth. 
+    Your absolute geographic location is defined by two coordinates,
+    longitude and latitude. In the case of imagery, the altitude is added/required
+    to be able to georeference pixels from this imagery.
+
+    The reference system is that in which the recording has been stored in the database,
+    which is usually EPSG Projection 4326 - WGS 84. 
+    """
+    lat: float
+    lon: float
+    alt: float
+
+    def __init__(self, lon: float, lat: float, alt: float):
+        self.lon = lon
+        self.lat = lat
+        self.alt = alt
+
+    @staticmethod
+    def from_tuple(tuple_lon_lat_alt):
+        return GeographicLocation(
+            tuple_lon_lat_alt[0],
+            tuple_lon_lat_alt[1],
+            tuple_lon_lat_alt[2])
+
+
+class RelativeLocation():
+    """RelativeLocation, east, north, up
+
+        The relative location in meters using the ENU coordinate system.
+    """
+    east: float
+    north: float
+    up: float
+
+    def __init__(self, east: float, north: float, up: float):
+        self.east = east
+        self.north = north
+        self.up = up
+
+    def location(self):
+        return [self.east, self.north, self.up]
 
 class PositionVector(NamedTuple):
     lat: float

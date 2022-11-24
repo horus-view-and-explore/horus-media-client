@@ -135,6 +135,23 @@ class TestFrames(unittest.TestCase):
         self.assertEqual(frame.index, 271)
         self.assertEqual(frame.distance, 0.0)
 
+    def test_query_distance(self):
+        connection = get_connection()
+
+        recordings = (973, 972)
+        point = (5.7058276, 50.8510157)  # EPSG:4326 (lon, lat)
+        distance_max = 2  # in meters
+        distance_min = 5  # in meters
+
+        frames = Frames(connection)
+        cursor = frames.query(
+            within=(point, distance_max),
+            distance=(point,  "> %s", distance_min),
+            recordingid=recordings,
+            limit=1
+        )
+        self.assertIsNotNone(cursor)
+
     def test_query_recordingid(self):
         connection = get_connection()
 

@@ -11,10 +11,22 @@ import logging
 from horus_media import Client, Geometry
 
 
+class read_arguments_from_file(argparse.Action):
+    def __call__(self, parser, namespace, values, option_string=None):
+        file_name = None
+        if option_string == "--db-file":
+            file_name = namespace.db_file
+
+        if option_string == "--s-file":
+            file_name = namespace.s_file
+
+        if file_name != None:
+            f = open(file_name, "r")
+            parser.parse_args(f.read().split(), namespace)
+
 def create_argument_parser():
     return argparse.ArgumentParser(
         formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-
 
 def add_database_arguments(parser):
     # db
@@ -29,6 +41,8 @@ def add_database_arguments(parser):
     parser.add_argument("--db-port", type=int, default=5432,
                         help="database connection port number")
 
+    parser.add_argument('--db-file', help="database configuration file", type=str,default="input/db.conf",action=read_arguments_from_file,nargs=0)
+
 
 def add_server_arguments(parser):
     parser.add_argument("-s", "--server",  metavar="URL", type=str, default="http://localhost:5050/web/",
@@ -37,6 +51,8 @@ def add_server_arguments(parser):
                         help="Horus Media Server timeout in seconds")
     parser.add_argument("-sa", "--server-attempts",  metavar="ATTEMPTS", type=int, default=5,
                         help="Horus Media Server number of attempts on connection failure")
+
+    parser.add_argument('--s-file', help="server configuration file",type=str, default="input/server.conf", action=read_arguments_from_file, nargs=0)
 
 
 def add_size_argument(parser, default=(1024, 1024)):
