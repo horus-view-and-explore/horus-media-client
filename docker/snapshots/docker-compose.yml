@@ -1,7 +1,7 @@
 version: '3'
 services:
-  spashots:
+  snapshots:
     build:
       dockerfile: ./Dockerfile
-    # volumes:
-    #  - /path/to/recordings/:/data
+    volumes:
+     - ../data:/data
