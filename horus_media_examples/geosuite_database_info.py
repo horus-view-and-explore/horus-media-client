@@ -7,12 +7,14 @@ sqlite_file = "path_to_your_sqlite_database"
 if len(sys.argv) > 1:
     sqlite_file = sys.argv[1]
 
-
 if not path.exists(sqlite_file):
     print("Database file: [", sqlite_file, "] could not be found.")
     exit()
 
 db = horus_spatialite.Spatialite(sqlite_file)
+
+for arg in sys.argv[2:]:
+    db.blob_contains_geometry(arg) 
 
 db.open()
 db.resolve()
@@ -23,6 +25,5 @@ for row in db.query():
     for fieldname, info in db.get_field_names_map().items():
         # print(row[info.idx])
         pass
-
 
 db.close()

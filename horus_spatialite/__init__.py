@@ -12,7 +12,7 @@ from typing import NamedTuple
 # Dep on the sqlite/spatialite for geosuiteDb
 try:
     import spatialite
-    from shapely import wkt
+    from shapely import wkt, wkb
 except ModuleNotFoundError as e:
     print(f"Install module '{e.name}' to use module 'horus_spatialite'.")
     raise e
@@ -28,6 +28,7 @@ class Spatialite:
         type: str
 
     recordings = {}
+    blob_containing_geometry = {}
     recording_field_name: str = None
     frame_index_field_name: str = None
     geometry_field_name = "the_geom"
@@ -38,6 +39,7 @@ class Spatialite:
     FIELD_INFO_NAME = 1
     FIELD_INFO_TYPE = 2
     FIELD_NAME_GEOM = "GEOMETRY"
+    FIELD_NAME_BLOB = "BLOB"
 
     # --- Remote Database
     RD_connection = None
@@ -101,6 +103,12 @@ class Spatialite:
     def get_recordings(self, cursor):
         cursor.execute("SELECT DISTINCT	" + self.recording_field_name +
                        " FROM \"" + self.table_name + "\";")
+    
+    def set_geometry_field_name(self, field_name):
+        self.geometry_field_name = field_name;
+
+    def blob_contains_geometry(self,field_name):
+        self.blob_containing_geometry[field_name] = True
 
     def get_field_names_map(self, cursor=None) -> {str: Field_info}:
         if not self.field_info_map is None:
@@ -158,6 +166,10 @@ class Spatialite:
             if field.type == self.FIELD_NAME_GEOM:
                 if cursor[field.idx] != None:
                     geoms[k] = wkt.loads(cursor[field.idx])
+            elif field.type == self.FIELD_NAME_BLOB:                
+                if field.name in self.blob_containing_geometry:                    
+                    if cursor[field.idx] != None:                        
+                        geoms[k] = wkb.loads(cursor[field.idx])                            
         return geoms
 
     def get_matched_frames_iterator(self):
@@ -289,10 +301,13 @@ class Spatialite:
         for row in cursor:
             if entries > 0:
                 entries -= 1
-                geoms = self.get_geometry(row, self.field_info_map)
+                geoms = self.get_geometry(row, self.field_info_map)                
                 print("--------------------")
                 for k, field_info in self.field_info_map.items():
-                    print(field_info.idx, ":", row[field_info.idx])
+                    if k in geoms:
+                        print(field_info.idx, ":", geoms[k]) 
+                    else:
+                        print(field_info.idx, ":", row[field_info.idx])
 
         print("\n-------  Recordings / Spatialite --------")
         for k, v in self.recordings.items():
@@ -426,7 +441,6 @@ class FrameMatchedIterator:
             if (has_recording_id and has_frame_index) or has_guid:
                 cursor = self.frames.query(**f.properties)
             else:
-
                 geom = self.spatialite_db.get_geometry(
                     frame)[self.spatialite_db.geometry_field_name]
 
@@ -439,6 +453,9 @@ class FrameMatchedIterator:
 
             f.spatialite_cursor = frame
             f.frame = Frame(cursor)
+
+            if (f.frame == None):
+                return f
 
             if not f.frame.recordingid in self.recordings_list:
                 temp_rec = next(Recording.query(

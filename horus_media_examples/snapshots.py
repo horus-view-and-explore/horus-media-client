@@ -23,6 +23,9 @@ parser.add_argument("--sqlite-framenr", type=str,
 parser.add_argument("--sqlite-recording", type=str,
                     help="the field specifying the recordingname")
 
+parser.add_argument("--sqlite-geometry", type=str,
+                    help="the field specifying an alternative geometry blob")
+
 # Not tested
 parser.add_argument("--recordings-on-disk", type=str,
                     help="Optionally provide a recording folder")
@@ -153,19 +156,27 @@ def look_at_polygon(polygon, mf: FrameMatchedIterator.MatchedFrame):
 
 def take_shaphost(db, mf: FrameMatchedIterator.MatchedFrame, geod):
 
-    geom = db.get_geometry(mf.spatialite_cursor)[db.geometry_field_name]
-    width = 800
+    geometries = []
+    geo = db.get_geometry(mf.spatialite_cursor)[db.geometry_field_name]
+    
+    if geo.type.startswith('Multi'):
+        for g in geo.geoms:
+            geometries.append(g)
+    else:
+        geometries.append(geo)
 
+    width = 800
     look_at_all: [Look_at] = []
 
-    if geom.type == "Polygon":
-        look_at_all = look_at_polygon(geom, mf)
-    elif geom.type == "LineString":
-        look_at_all = look_at_linestring(geom, mf, 5, 5, 20, 0.1)        
-    elif geom.type == "Point":
-        look_at_all = look_at_point(geom,mf, 0.3)        
-    else:
-        print("Not supported", geom.type)
+    for geom in geometries:
+        if geom.type == "Polygon":
+            look_at_all = [*look_at_all, *look_at_polygon(geom, mf)]
+        elif geom.type == "LineString":
+            look_at_all = [*look_at_all, *look_at_linestring(geom, mf, 5, 5, 20, 0.1)]       
+        elif geom.type == "Point":
+            look_at_all = [*look_at_all, *look_at_point(geom,mf, 0.3) ]       
+        else:
+            print("Not supported", geom.type)
 
     nr_shaphosts = len(look_at_all)
 
@@ -203,6 +214,9 @@ if not args.sqlite_recording is None:
 if not args.sqlite_framenr is None:
     db.set_frame_index_field(args.sqlite_framenr)
 
+if not args.sqlite_geometry is None:
+    db.set_geometry_field_name(args.sqlite_geometry)
+    db.blob_contains_geometry(args.sqlite_geometry)
 
 db.set_remote_db_connection(connection)
 
