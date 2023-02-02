@@ -228,6 +228,7 @@ sp_camera = SphericalCamera()
 sp_camera.set_network_client(client)
 
 fmi: FrameMatchedIterator = db.get_matched_frames_iterator()
+fmi.set_distance_limits(5, 10)
 
 if (not args.recording_id is None):
     fmi.set_static_recording_by_id(args.recording_id)

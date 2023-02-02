@@ -8,7 +8,7 @@ from . import util
 
 # This example shows how to iterate over all the recordings
 
-# Comand line input handling
+# Command line input handling
 parser = util.create_argument_parser()
 util.add_database_arguments(parser)
 util.add_server_arguments(parser)

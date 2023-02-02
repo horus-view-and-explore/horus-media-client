@@ -341,6 +341,8 @@ class FrameMatchedIterator:
             return self.spatialite_cursor != None and self.frame != None and self.recording != None
 
     spatialite_db: Spatialite
+    d_min: int = 5
+    d_max: int = 10
     current_recording: str = None
     static_recording: Recording = None
     recordings_list: [str, Recording] = {}
@@ -374,6 +376,10 @@ class FrameMatchedIterator:
                 self.use_frame_index_field = True
                 self.frame_index_field_idx = self.spatialite_db.field_info_map[
                     self.spatialite_db.frame_index_field_name].idx
+
+    def set_distance_limits(self, distance_min, distance_max):
+        self.d_min = distance_min
+        self.d_max = distance_max
 
     def set_static_recording_by_id(self, id):
         recordings = Recordings(self.connection)
@@ -444,12 +450,10 @@ class FrameMatchedIterator:
                 geom = self.spatialite_db.get_geometry(
                     frame)[self.spatialite_db.geometry_field_name]
 
-                distance_min = 5
-                distance_max = 10
-                cursor = self.frames.query(within=(*geom.centroid.coords, distance_max),
+                cursor = self.frames.query(within=(*geom.centroid.coords, self.d_max),
                                            **f.properties,
                                            distance=(*geom.centroid.coords, "> %s",
-                                                     distance_min), limit=1)
+                                                     self.d_min), limit=1)
 
             f.spatialite_cursor = frame
             f.frame = Frame(cursor)

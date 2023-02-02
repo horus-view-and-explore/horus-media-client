@@ -9,7 +9,7 @@ from horus_media import ImageRequestBuilder, ImageProvider, Mode, Scales
 
 from . import util
 
-# Comand line input handling
+# Command line input handling
 parser = util.create_argument_parser()
 util.add_database_arguments(parser)
 util.add_server_arguments(parser)

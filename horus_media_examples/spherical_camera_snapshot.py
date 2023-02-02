@@ -20,7 +20,7 @@ if not os.path.exists(output_dir):
 # This example shows how to create snapshots based on geometry
 
 
-# Comand line input handling
+# Command line input handling
 parser = util.create_argument_parser()
 util.add_database_arguments(parser)
 util.add_server_arguments(parser)
