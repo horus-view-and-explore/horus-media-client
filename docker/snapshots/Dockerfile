@@ -12,7 +12,7 @@ RUN apt install -y python3-shapely
 RUN apt install -y python3-pymap3d
 RUN apt install -y python-is-python3
 
-RUN pip install horus-media-client==0.9.1
+RUN pip install horus-media-client==0.9.3
 RUN pip install spatialite
 
 CMD ["bash"]

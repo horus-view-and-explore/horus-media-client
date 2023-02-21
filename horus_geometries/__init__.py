@@ -133,18 +133,42 @@ class Geometry_proj:
         
         length = proj.geometry.length
         equal_distance = length / math.ceil(length / max_length)
-        distances = NP.arange(0, length, equal_distance)
-        points = [proj.geometry.interpolate(distance)
-            for distance in distances] + [proj.geometry.boundary[1]]
-        
+
+        linestrings = []
+        points = []
+
+        geoms  = list(proj.geometry.coords)
+        while len(geoms) > 0:
+            cp = geoms.pop(0)
+
+            if len(points) >= 1:
+                linestring = SP.geometry.LineString([*points,cp])
+                
+                if linestring.length <= equal_distance:
+                    points.append(cp)
+                else:
+                    split_point = linestring.interpolate(equal_distance)
+                    linestring = SP.geometry.LineString([*points,split_point])
+                    linestrings.append(linestring)
+                    geoms.insert(0,cp)
+                    geoms.insert(0,split_point)
+                    points = []
+            else:
+                points.append(cp)
+
+        if len(points) > 1:
+            linestring = SP.geometry.LineString(points)
+            if linestring.length > 0.01:
+                linestrings.append(linestring)
+    
         projections = []
-        for x in range(len(distances) - 1):
-            p = Geometry_proj.Projection()
-            p.geometry = SP.geometry.LineString([points[x], points[x+1]])
-            p.is_enu = proj.is_enu
-            p.geod = proj.geod
-            p.model = proj.model
-            projections.append(p)
+        for l in linestrings:
+             p = Geometry_proj.Projection()
+             p.geometry = l
+             p.is_enu = proj.is_enu
+             p.geod = proj.geod
+             p.model = proj.model
+             projections.append(p)
     
         if not incomming_is_enu:
             projections = [self.to_geodetic(proj.geometry,proj) for proj in projections]

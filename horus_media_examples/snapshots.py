@@ -72,7 +72,7 @@ class Look_at:
 
 def add_to_output(frame, geometry, filename, nr, matched_frame):
     """
-       Add the curreont geometry and attributes to the output database
+       Add the current geometry and attributes to the output database
     """
     global output_database
 
@@ -82,6 +82,7 @@ def add_to_output(frame, geometry, filename, nr, matched_frame):
     record["sub_id"] = nr
     record["frame_index"] = frame.index
     record["recording_id"] = frame.recordingid
+    record["distance"] = geod.line_length(*zip(*[frame.get_location()[:2], geometry.centroid.coords[0]]))
 
     for k, v in matched_frame.metadata.items():
         record[k] = v
@@ -125,7 +126,6 @@ def look_at_linestring(linestring, mf: FrameMatchedIterator.MatchedFrame, max_le
         of 'max_length' in meters.
     """
     gp = Geometry_proj()
-    geom_length = geod.geometry_length(linestring)
     
     if geod.geometry_length(linestring) > max_length:
         
@@ -172,7 +172,7 @@ def take_shaphost(db, mf: FrameMatchedIterator.MatchedFrame, geod):
         if geom.type == "Polygon":
             look_at_all = [*look_at_all, *look_at_polygon(geom, mf)]
         elif geom.type == "LineString":
-            look_at_all = [*look_at_all, *look_at_linestring(geom, mf, 5, 5, 20, 0.1)]       
+            look_at_all = [*look_at_all, *look_at_linestring(geom, mf, 5, 10, 20, 0.1)]       
         elif geom.type == "Point":
             look_at_all = [*look_at_all, *look_at_point(geom,mf, 0.3) ]       
         else:
@@ -228,7 +228,7 @@ sp_camera = SphericalCamera()
 sp_camera.set_network_client(client)
 
 fmi: FrameMatchedIterator = db.get_matched_frames_iterator()
-fmi.set_distance_limits(5, 10)
+fmi.set_distance_limits(10, 20)
 
 if (not args.recording_id is None):
     fmi.set_static_recording_by_id(args.recording_id)
