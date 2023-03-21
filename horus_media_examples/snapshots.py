@@ -245,6 +245,10 @@ while mf != None:
             print("\nIncomplete match")
             print(mf.dump())
     except Exception as e:
+        if str(e) == "Request-sent":
+            # reset network connection
+            client = util.get_client(args)
+            sp_camera.set_network_client(client)
         print("Exception", e)
         print("Properties: ", mf.properties)
         print("Metadata: ", mf.metadata)
