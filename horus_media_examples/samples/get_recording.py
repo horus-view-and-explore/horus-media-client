@@ -5,6 +5,7 @@ import psycopg2
 from horus_db import Recordings, Recording
 
 from .. import util
+
 util.sample_script_header(__name__)
 
 # This example shows how to get a specific recording
@@ -12,7 +13,8 @@ util.sample_script_header(__name__)
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb"
+    )
 
 
 connection = get_connection()
@@ -33,8 +35,11 @@ recording = Recording(cursor)
 
 # Or query the database for a recording by directory
 cursor = connection.cursor()
-cursor.execute("""SELECT id, recordingdirectory, boundingbox, fileformat
-FROM recordings WHERE recordingdirectory = %s;""", (recording.directory,))
+cursor.execute(
+    """SELECT id, recordingdirectory, boundingbox, fileformat
+FROM recordings WHERE recordingdirectory = %s;""",
+    (recording.directory,),
+)
 recording = Recording(cursor)
 
 print(" ", recording.id, " ", recording.directory)

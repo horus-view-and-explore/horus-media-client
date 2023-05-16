@@ -4,6 +4,7 @@
 import logging
 from typing import NamedTuple
 
+
 class Table:
     attributes = {}
     repr_attributes = ["id"]
@@ -37,8 +38,10 @@ class Table:
 
     def __repr__(self):
         cls = type(self)
-        attrs = ', '.join('{}={}'.format(attr, getattr(self, attr))
-                          for attr in type(self).repr_attributes)
+        attrs = ", ".join(
+            "{}={}".format(attr, getattr(self, attr))
+            for attr in type(self).repr_attributes
+        )
         return f"{cls.__name__}({attrs})"
 
 
@@ -60,9 +63,7 @@ class RecordingSetup(Table):
 
     @property
     def lever_arm(self):
-        return LeverArm(self.leverArmX,
-                        self.leverArmY,
-                        self.leverArmZ)
+        return LeverArm(self.leverArmX, self.leverArmY, self.leverArmZ)
 
 
 class Recording(Table):
@@ -76,18 +77,11 @@ class Recording(Table):
 
 
 class Frame(Table):
-    attributes = {
-        "heading": "azimuth",
-        "timestamp": "stamp",
-        "uuid": "guid"
-    }
+    attributes = {"heading": "azimuth", "timestamp": "stamp", "uuid": "guid"}
     repr_attributes = ["id", "recordingid", "index"]
 
     def get_location(self):
-        return (
-            self.longitude,
-            self.latitude,
-            self.altitude)
+        return (self.longitude, self.latitude, self.altitude)
 
 
 class RecordingSetups:
@@ -101,8 +95,11 @@ class RecordingSetups:
 
     def get(self, id):
         cursor = self.__connection.cursor()
-        cursor.execute("""SELECT "cameraHeight", "leverArmX", "leverArmY", "leverArmZ", "recording_id"
-FROM "MoviePlayer_recordingsetup" WHERE recording_id = %s;""", (id,))
+        cursor.execute(
+            """SELECT "cameraHeight", "leverArmX", "leverArmY", "leverArmZ", "recording_id"
+FROM "MoviePlayer_recordingsetup" WHERE recording_id = %s;""",
+            (id,),
+        )
         return cursor
 
 
@@ -112,20 +109,28 @@ class Recordings:
 
     def get(self, id):
         cursor = self.__connection.cursor()
-        cursor.execute("""SELECT id, recordingdirectory, boundingbox, fileformat
-FROM recordings WHERE id = %s;""", (id,))
+        cursor.execute(
+            """SELECT id, recordingdirectory, boundingbox, fileformat
+FROM recordings WHERE id = %s;""",
+            (id,),
+        )
         return cursor
 
     def get_setup(self, recording):
         cursor = self.__connection.cursor()
-        cursor.execute("""SELECT "cameraHeight", "leverArmX", "leverArmY", "leverArmZ", "recording_id"
-FROM "MoviePlayer_recordingsetup" WHERE recording_id = %s;""", (recording.id,))
+        cursor.execute(
+            """SELECT "cameraHeight", "leverArmX", "leverArmY", "leverArmZ", "recording_id"
+FROM "MoviePlayer_recordingsetup" WHERE recording_id = %s;""",
+            (recording.id,),
+        )
         recording.setup = RecordingSetup(cursor)
 
     def all(self):
         cursor = self.__connection.cursor()
-        cursor.execute("""SELECT id, recordingdirectory, boundingbox, fileformat
-FROM recordings""")
+        cursor.execute(
+            """SELECT id, recordingdirectory, boundingbox, fileformat
+FROM recordings"""
+        )
         return cursor
 
     def query(self, **kwargs):
@@ -168,8 +173,7 @@ FROM recordings""")
                 orderby_clause += value
                 continue
 
-            logging.warning(
-                f'Recordings query unknown argument "{arg}" skipped')
+            logging.warning(f'Recordings query unknown argument "{arg}" skipped')
 
         sql = "SELECT " + ", ".join(select_clause) + " FROM recordings"
 
@@ -204,7 +208,7 @@ class Frames:
             "pitch",
             "azimuth",
             "stamp",
-            "index"
+            "index",
         }
         where_clause = []
         orderby_clause = []
@@ -218,16 +222,19 @@ class Frames:
                 point, distance = value
                 st_point = f"ST_SetSRID(ST_Point({point[0]}, {point[1]}), 4326)"
                 select_clause.add(
-                    f"ST_Distance(geom::geography, {st_point}::geography) as distance")
+                    f"ST_Distance(geom::geography, {st_point}::geography) as distance"
+                )
                 orderby_clause.append("distance")
                 where_clause.append(
-                    f"ST_DWithin(geom::geography, {st_point}::geography, {distance})")
+                    f"ST_DWithin(geom::geography, {st_point}::geography, {distance})"
+                )
                 continue
             if arg == "distance":
                 point, operator, distance = value
                 st_point = f"ST_SetSRID(ST_Point({point[0]}, {point[1]}), 4326)"
                 where_clause.append(
-                    f"ST_Distance(geom::geography, {st_point}::geography) {operator}")
+                    f"ST_Distance(geom::geography, {st_point}::geography) {operator}"
+                )
                 params.append(distance)
                 continue
             if arg == "time_interval":

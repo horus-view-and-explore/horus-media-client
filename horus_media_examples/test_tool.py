@@ -24,7 +24,7 @@ frames = Frames(connection)
 grid = Grid()
 
 streamHandler = logging.StreamHandler(sys.stdout)
-formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+formatter = logging.Formatter("%(asctime)s %(levelname)s %(message)s")
 streamHandler.setFormatter(formatter)
 
 logger = logging.getLogger()
@@ -40,9 +40,9 @@ while True:
 
     while frame is not None:
         request_builder = ImageRequestBuilder(frame.recordingid, frame.uuid)
-        requests = client.fetch_all(request_builder.build(
-            Mode.panoramic, Scales.Px_2048, section) for section in grid)
+        requests = client.fetch_all(
+            request_builder.build(Mode.panoramic, Scales.Px_2048, section)
+            for section in grid
+        )
         logging.info(f"{frame} {request_builder}")
         frame = Frame(cursor)
-
-

@@ -6,6 +6,7 @@ from horus_db import Frames, Recordings, Frame, Recording
 
 
 from .. import util
+
 util.sample_script_header(__name__)
 
 # This example shows how to iterate over all the recordings
@@ -13,7 +14,8 @@ util.sample_script_header(__name__)
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb"
+    )
 
 
 connection = get_connection()

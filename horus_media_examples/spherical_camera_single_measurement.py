@@ -6,17 +6,33 @@ from pprint import pprint
 
 import json
 from horus_media import Size
-from horus_camera import SphericalCamera, Pixel, SphericalImage, GeoReferencedPixel, ViewParameterizedPixel
+from horus_camera import (
+    SphericalCamera,
+    Pixel,
+    SphericalImage,
+    GeoReferencedPixel,
+    ViewParameterizedPixel,
+)
 from horus_db import Frames, Recordings, Frame, Recording
 from horus_gis import SchemaProvider
 from . import util
 from horus_geopandas import HorusGeoDataFrame
 import geopandas as gpd
 
-def fill_record(record,frame,grp: GeoReferencedPixel, det_vp: ViewParameterizedPixel,camera:SphericalCamera, image:SphericalImage, detection):
 
+def fill_record(
+    record,
+    frame,
+    grp: GeoReferencedPixel,
+    det_vp: ViewParameterizedPixel,
+    camera: SphericalCamera,
+    image: SphericalImage,
+    detection,
+):
     # update geometry
-    record["geometry"] = gpd.points_from_xy(x=[grp.geo_location.lon], y=[grp.geo_location.lat])
+    record["geometry"] = gpd.points_from_xy(
+        x=[grp.geo_location.lon], y=[grp.geo_location.lat]
+    )
     # Record
     record["rec_id"] = grp.recording_id
     record["frame_idx"] = grp.frame_index
@@ -32,7 +48,7 @@ def fill_record(record,frame,grp: GeoReferencedPixel, det_vp: ViewParameterizedP
     record["cam_alt"] = image.get_geo_location_camera().alt
     #
     record["dt_class"] = detection.classification
-    record["dt_name"] =  detection.name
+    record["dt_name"] = detection.name
     record["dt_x"] = detection.detection_pixel.col
     record["dt_y"] = detection.detection_pixel.row
     record["dt_width"] = detection.detection_size.width
@@ -51,7 +67,6 @@ def fill_record(record,frame,grp: GeoReferencedPixel, det_vp: ViewParameterizedP
     record["surf_px_y"] = grp.pixel_location.row
     record["surf_yaw"] = grp.viewing_parameters.yaw
     record["surf_pitch"] = grp.viewing_parameters.pitch
-
 
 
 # ----------    Overview  --------------
@@ -84,17 +99,14 @@ recordings = Recordings(connection)
 
 
 # Opening JSON file
-f = open('input/spherical_camera_single_measurement.json')
+f = open("input/spherical_camera_single_measurement.json")
 data = json.load(f)
 
 # Select the demo city of Rotterdam
-recording = next(Recording.query(
-    recordings, directory_like=data["recording_name"]))
+recording = next(Recording.query(recordings, directory_like=data["recording_name"]))
 recordings.get_setup(recording)
 print(recording, " -> ", recording.directory)
 print(recording.setup)
-
-
 
 
 # Step 1. create and configure spherical camera
@@ -103,8 +115,12 @@ sp_camera.set_network_client(client)
 
 # Step 2. Get a recorded frame and place the camera onto that 'frame'
 frames = Frames(connection)
-results = Frame.query(frames, recordingid=recording.id,
-                      index=210, order_by="index",)
+results = Frame.query(
+    frames,
+    recordingid=recording.id,
+    index=210,
+    order_by="index",
+)
 
 # step 3. do some sight seeing..
 # This sections hardcodes looking at points of interest, which
@@ -118,19 +134,19 @@ class Camera:
     yaw: float
     pitch: float
     cam_size: Size
-    cam_hor_fov:float
+    cam_hor_fov: float
 
     def __init__(self):
         self.yaw = 0
         self.pitch = -10
-        self.cam_size = Size(800,800)
+        self.cam_size = Size(800, 800)
         self.cam_hor_fov = 90
 
-    def load(self,data):
+    def load(self, data):
         if "width" in data:
-            self.cam_size = Size(int(data["width"]),self.cam_size.height)
+            self.cam_size = Size(int(data["width"]), self.cam_size.height)
         if "height" in data:
-            self.cam_size = Size(self.cam_size.width,int(data["height"]))
+            self.cam_size = Size(self.cam_size.width, int(data["height"]))
         if "yaw" in data:
             self.yaw = float(data["yaw"])
         if "pitch" in data:
@@ -138,27 +154,34 @@ class Camera:
         if "horizontal_fov" in data:
             self.cam_hor_fov = float(data["horizontal_fov"])
 
-
     def clone(self):
         return copy.deepcopy(self)
 
+
 class Detection:
-    """Describes and a Detection / Point of interest within the image """
+    """Describes and a Detection / Point of interest within the image"""
+
     surface_pixel: Pixel
     detection_pixel: Pixel
     detection_size: Size
-    classification :int
-    name:str
-    confidence : float
+    classification: int
+    name: str
+    confidence: float
     camera: Camera
 
-    def __init__(self,camera) -> None:
+    def __init__(self, camera) -> None:
         self.camera = camera
 
-    def load(self,dt):
-        self.surface_pixel = Pixel(int(dt["surface_pixel"]["r"]),int(dt["surface_pixel"]["c"]))
-        self.detection_pixel = Pixel(int(dt["detection_pixel"]["r"]), int(dt["detection_pixel"]["c"]))
-        self.detection_size = Size(int(dt["detection_size"]["width"]), int(dt["detection_size"]["height"]))
+    def load(self, dt):
+        self.surface_pixel = Pixel(
+            int(dt["surface_pixel"]["r"]), int(dt["surface_pixel"]["c"])
+        )
+        self.detection_pixel = Pixel(
+            int(dt["detection_pixel"]["r"]), int(dt["detection_pixel"]["c"])
+        )
+        self.detection_size = Size(
+            int(dt["detection_size"]["width"]), int(dt["detection_size"]["height"])
+        )
 
         self.name = dt["name"]
         self.confidence = float(dt["confidence"])
@@ -166,11 +189,6 @@ class Detection:
 
         if "camera" in dt:
             self.camera.load(dt["camera"])
-
-
-
-
-
 
 
 # Step 4,
@@ -185,15 +203,19 @@ camera.load(data["camera"])
 detections_per_frame = data["detections_per_frame"]
 
 # Create output directory
-output_dir = os.path.join(os.getcwd(), 'output')
+output_dir = os.path.join(os.getcwd(), "output")
 
 if not os.path.exists(output_dir):
     os.makedirs(output_dir)
 
 
 for frame_id in detections_per_frame:
-    results = Frame.query(frames, recordingid=recording.id,
-                          index=frame_id, order_by="index",)
+    results = Frame.query(
+        frames,
+        recordingid=recording.id,
+        index=frame_id,
+        order_by="index",
+    )
     frame = next(results)
     if frame is None:
         print("No frames!")
@@ -203,9 +225,7 @@ for frame_id in detections_per_frame:
     sp_camera.set_frame(recording, frame)
     print("camera_height", sp_camera.height)
 
-
     for detection_id in detections_per_frame[frame_id]:
-
         detection = Detection(camera.clone())
         detection.load(detections_per_frame[frame_id][detection_id])
 
@@ -227,18 +247,21 @@ for frame_id in detections_per_frame:
         # Step 5
         # obtain a GeoReferencedPixel on the surface
         grp: GeoReferencedPixel = spherical_image.project_pixel_on_ground_surface(
-            detection.surface_pixel)
+            detection.surface_pixel
+        )
         grp.name = detection.name
 
         # step 6
         # obtain the ViewParameterizedPixel of the actual detection
-        detection_parms = spherical_image.get_view_parameterized_pixel(detection.detection_pixel);
+        detection_parms = spherical_image.get_view_parameterized_pixel(
+            detection.detection_pixel
+        )
 
-        fill_record(record,frame,grp,detection_parms,sp_camera,spherical_image, detection)
+        fill_record(
+            record, frame, grp, detection_parms, sp_camera, spherical_image, detection
+        )
         record["usr_id"] = database.dataframe.shape[0]
         database.add_frame(record)
 
 
-
 database.write_shapefile(os.path.join(output_dir, "single_measurement.shp"))
-

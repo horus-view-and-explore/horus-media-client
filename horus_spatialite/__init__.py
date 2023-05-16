@@ -1,5 +1,5 @@
 """Horus database"""
-# Copyright(C) 2022 Horus View and Explore B.V.
+# Copyright(C) 2022, 2023 Horus View and Explore B.V.
 
 import os
 import pathlib
@@ -22,6 +22,7 @@ class Spatialite:
     """
     Database used for making annotations using the Horus Geo Suite
     """
+
     class Field_info(NamedTuple):
         idx: int
         name: str
@@ -82,7 +83,7 @@ class Spatialite:
         return False, cursor
 
     def version(self):
-        return self.conn.execute('SELECT spatialite_version()').fetchone()[0]
+        return self.conn.execute("SELECT spatialite_version()").fetchone()[0]
 
     def get_table_name(self):
         return self.table_name
@@ -91,23 +92,31 @@ class Spatialite:
         self.table_name = name
 
     def get_field_query(self, cursor):
-        cursor.execute("SELECT sql FROM sqlite_master WHERE tbl_name = '" +
-                       self.table_name + "' AND type = 'table'")
+        cursor.execute(
+            "SELECT sql FROM sqlite_master WHERE tbl_name = '"
+            + self.table_name
+            + "' AND type = 'table'"
+        )
 
     def get_table_info_query(self, cursor):
-        cursor.execute("PRAGMA table_info(\""+self.table_name+"\")")
+        cursor.execute('PRAGMA table_info("' + self.table_name + '")')
 
     def get_table_names(self, cursor):
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table';")
 
     def get_recordings(self, cursor):
-        cursor.execute("SELECT DISTINCT	" + self.recording_field_name +
-                       " FROM \"" + self.table_name + "\";")
-    
-    def set_geometry_field_name(self, field_name):
-        self.geometry_field_name = field_name;
+        cursor.execute(
+            "SELECT DISTINCT	"
+            + self.recording_field_name
+            + ' FROM "'
+            + self.table_name
+            + '";'
+        )
 
-    def blob_contains_geometry(self,field_name):
+    def set_geometry_field_name(self, field_name):
+        self.geometry_field_name = field_name
+
+    def blob_contains_geometry(self, field_name):
         self.blob_containing_geometry[field_name] = True
 
     def get_field_names_map(self, cursor=None) -> {str: Field_info}:
@@ -118,9 +127,14 @@ class Spatialite:
         self.get_table_info_query(cursor)
         records = cursor.fetchall()
 
-        data = {row[self.FIELD_INFO_NAME]: Spatialite.Field_info(row[self.FIELD_INFO_IDX],
-                                                                 row[self.FIELD_INFO_NAME],
-                                                                 row[self.FIELD_INFO_TYPE]) for row in records}
+        data = {
+            row[self.FIELD_INFO_NAME]: Spatialite.Field_info(
+                row[self.FIELD_INFO_IDX],
+                row[self.FIELD_INFO_NAME],
+                row[self.FIELD_INFO_TYPE],
+            )
+            for row in records
+        }
         row_idx = len(data)
         data["rowid"] = Spatialite.Field_info(row_idx, "rowid", "INTEGER")
 
@@ -145,9 +159,9 @@ class Spatialite:
             else:
                 fields.append(k)
 
-        myselect = ','.join(fields)
+        myselect = ",".join(fields)
 
-        query_ = "SELECT " + myselect + " FROM \""+self.table_name+"\""
+        query_ = "SELECT " + myselect + ' FROM "' + self.table_name + '"'
 
         add = " "
         for x in order_by_list:
@@ -166,10 +180,10 @@ class Spatialite:
             if field.type == self.FIELD_NAME_GEOM:
                 if cursor[field.idx] != None:
                     geoms[k] = wkt.loads(cursor[field.idx])
-            elif field.type == self.FIELD_NAME_BLOB:                
-                if field.name in self.blob_containing_geometry:                    
-                    if cursor[field.idx] != None:                        
-                        geoms[k] = wkb.loads(cursor[field.idx])                            
+            elif field.type == self.FIELD_NAME_BLOB:
+                if field.name in self.blob_containing_geometry:
+                    if cursor[field.idx] != None:
+                        geoms[k] = wkb.loads(cursor[field.idx])
         return geoms
 
     def get_matched_frames_iterator(self):
@@ -185,7 +199,10 @@ class Spatialite:
         cursor = self.get_cursor()
         self.field_info_map = self.get_field_names_map(cursor)
 
-        if self.recording_field_name != None and self.recording_field_name in self.field_info_map:
+        if (
+            self.recording_field_name != None
+            and self.recording_field_name in self.field_info_map
+        ):
             # Get all the unique recordings in spatialite
             self.get_recordings(cursor)
             data = [x[0] for x in cursor.fetchall() if x[0] != None]
@@ -199,15 +216,16 @@ class Spatialite:
         # Resolve relation local recording(field) => remote
         if self.recording_field_name != None and self.RD_connection != None:
             self.spatialite_RD_recording_map = self.resolve_remote_recording(
-                self.recording_field_name, self.RD_connection, cursor)
+                self.recording_field_name, self.RD_connection, cursor
+            )
 
         # Resolve relation local recording(field => disk)
         if self.ROD_recordings_root_folder != None:
             self.resolve_on_disk_recording(self.ROD_recordings_root_folder)
 
     def match_paths(self, r, p, candidates):
-        r1 = r.split('\\')
-        c1 = [c.split('/') for c in candidates]
+        r1 = r.split("\\")
+        c1 = [c.split("/") for c in candidates]
 
         while r1[-1] != p:
             r1.pop()
@@ -232,7 +250,7 @@ class Spatialite:
 
     def resolve_on_disk_recording(self, recording_folder: str):
         for k, v in self.recordings.items():
-            folder = recording_folder+"**/"+v
+            folder = recording_folder + "**/" + v
 
             candidates = glob.glob(folder, recursive=True)
             matched = self.match_paths(k, v, candidates)
@@ -245,8 +263,7 @@ class Spatialite:
 
         for k, v in self.recordings.items():
             recordings = Recordings(connection)
-            cursor2 = Recording.query(
-                recordings, directory_like=v, order_by="id")
+            cursor2 = Recording.query(recordings, directory_like=v, order_by="id")
 
             rec = next(cursor2, None)
             recordings.get_setup(rec)
@@ -257,8 +274,7 @@ class Spatialite:
                 rec = next(cursor2, None)
 
             while len(recs) != 1:
-                raise Exception(
-                    "Spatialite::resolve_recording Implement duplicate!")
+                raise Exception("Spatialite::resolve_recording Implement duplicate!")
 
             resolved[k] = recs[0]
 
@@ -270,10 +286,11 @@ class Spatialite:
     def resolve_frames(self, recording_name):
         for k, v in self.spatialite_ROD_recording_map.items():
             if k == recording_name:
-                tree = ElementTree.parse(v+"/frames.xml")
+                tree = ElementTree.parse(v + "/frames.xml")
                 root = tree.getroot()
                 a = tree.findall(
-                    "./{http://tempuri.org/FramesDataSet.xsd}Location/{http://tempuri.org/FramesDataSet.xsd}GUID")
+                    "./{http://tempuri.org/FramesDataSet.xsd}Location/{http://tempuri.org/FramesDataSet.xsd}GUID"
+                )
                 frame_location_guids = [x.text for x in a]
                 return frame_location_guids
 
@@ -281,7 +298,6 @@ class Spatialite:
         return os.path.splitext(os.path.basename(self.filename))[0]
 
     def show_info(self):
-
         print("\n------- Spatialite --------")
         print("Version: ", self.version())
         print("Table: ", self.get_table_name())
@@ -301,11 +317,11 @@ class Spatialite:
         for row in cursor:
             if entries > 0:
                 entries -= 1
-                geoms = self.get_geometry(row, self.field_info_map)                
+                geoms = self.get_geometry(row, self.field_info_map)
                 print("--------------------")
                 for k, field_info in self.field_info_map.items():
                     if k in geoms:
-                        print(field_info.idx, ":", geoms[k]) 
+                        print(field_info.idx, ":", geoms[k])
                     else:
                         print(field_info.idx, ":", row[field_info.idx])
 
@@ -323,7 +339,6 @@ class Spatialite:
 
 
 class FrameMatchedIterator:
-
     class MatchedFrame:
         spatialite_cursor = None
         frame: Frame = None
@@ -338,11 +353,16 @@ class FrameMatchedIterator:
             print("Properties", self.properties)
 
         def oke(self):
-            return self.spatialite_cursor != None and self.frame != None and self.recording != None
+            return (
+                self.spatialite_cursor != None
+                and self.frame != None
+                and self.recording != None
+            )
 
     spatialite_db: Spatialite
     d_min: int = 5
     d_max: int = 10
+    frame_limit: int = 10
     current_recording: str = None
     static_recording: Recording = None
     recordings_list: [str, Recording] = {}
@@ -362,24 +382,39 @@ class FrameMatchedIterator:
         self.spatialite_db = spatialite_db
         self.frames = Frames(connection)
         self.recordings = Recordings(connection)
+        self.select_frame = lambda geom, cursor: Frame(cursor)
 
         # Can we use the Recording field
         if spatialite_db.recording_field_name != None:
-            if self.spatialite_db.recording_field_name in self.spatialite_db.field_info_map:
+            if (
+                self.spatialite_db.recording_field_name
+                in self.spatialite_db.field_info_map
+            ):
                 self.use_recording_field = True
                 self.recording_field_idx = self.spatialite_db.field_info_map[
-                    self.spatialite_db.recording_field_name].idx
+                    self.spatialite_db.recording_field_name
+                ].idx
 
         # Can we use Frame index field
         if spatialite_db.frame_index_field_name != None:
-            if self.spatialite_db.frame_index_field_name in self.spatialite_db.field_info_map:
+            if (
+                self.spatialite_db.frame_index_field_name
+                in self.spatialite_db.field_info_map
+            ):
                 self.use_frame_index_field = True
                 self.frame_index_field_idx = self.spatialite_db.field_info_map[
-                    self.spatialite_db.frame_index_field_name].idx
+                    self.spatialite_db.frame_index_field_name
+                ].idx
 
     def set_distance_limits(self, distance_min, distance_max):
         self.d_min = distance_min
         self.d_max = distance_max
+
+    def set_frame_limit(self, frame_limit):
+        self.frame_limit = frame_limit
+
+    def set_frame_selector(self, select_frame):
+        self.select_frame = select_frame
 
     def set_static_recording_by_id(self, id):
         recordings = Recordings(self.connection)
@@ -397,9 +432,10 @@ class FrameMatchedIterator:
         frame = next(self.cursor, None)
 
         while frame != None:
-
             # Build up the matched frame
             f = self.MatchedFrame()
+
+            f.spatialite_cursor = frame
 
             use_recording_field = self.use_recording_field
             use_frame_index_field = self.use_frame_index_field
@@ -413,7 +449,8 @@ class FrameMatchedIterator:
                     if frame[self.recording_field_idx] != self.current_recording:
                         self.current_recording = frame[self.recording_field_idx]
                         self.guids = self.spatialite_db.resolve_frames(
-                            self.current_recording)
+                            self.current_recording
+                        )
 
             if use_frame_index_field:
                 if frame[self.frame_index_field_idx] == None:
@@ -422,8 +459,7 @@ class FrameMatchedIterator:
                     frame_index = int(frame[self.frame_index_field_idx])
                     # Try to be more precise with GUID
                     if self.guids != None and len(self.guids) >= frame_index:
-                        frame_guid = self.guids[int(
-                            frame[self.frame_index_field_idx])]
+                        frame_guid = self.guids[int(frame[self.frame_index_field_idx])]
 
             if frame_guid != None:
                 f.properties["guid"] = frame_guid
@@ -437,8 +473,15 @@ class FrameMatchedIterator:
 
             elif not self.current_recording is None:
                 if not self.spatialite_db.spatialite_RD_recording_map is None:
-                    if self.current_recording in self.spatialite_db.spatialite_RD_recording_map:
-                        f.properties["recordingid"] = self.spatialite_db.spatialite_RD_recording_map[self.current_recording].id
+                    if (
+                        self.current_recording
+                        in self.spatialite_db.spatialite_RD_recording_map
+                    ):
+                        f.properties[
+                            "recordingid"
+                        ] = self.spatialite_db.spatialite_RD_recording_map[
+                            self.current_recording
+                        ].id
 
             has_guid = "guid" in f.properties
             has_frame_index = "index" in f.properties
@@ -446,24 +489,26 @@ class FrameMatchedIterator:
 
             if (has_recording_id and has_frame_index) or has_guid:
                 cursor = self.frames.query(**f.properties)
+                f.frame = Frame(cursor)
             else:
-                geom = self.spatialite_db.get_geometry(
-                    frame)[self.spatialite_db.geometry_field_name]
+                geom = self.spatialite_db.get_geometry(frame)[
+                    self.spatialite_db.geometry_field_name
+                ]
+                cursor = self.frames.query(
+                    within=(*geom.centroid.coords, self.d_max),
+                    **f.properties,
+                    distance=(*geom.centroid.coords, "> %s", self.d_min),
+                    limit=self.frame_limit,
+                )
+                f.frame = self.select_frame(geom, cursor)
 
-                cursor = self.frames.query(within=(*geom.centroid.coords, self.d_max),
-                                           **f.properties,
-                                           distance=(*geom.centroid.coords, "> %s",
-                                                     self.d_min), limit=1)
-
-            f.spatialite_cursor = frame
-            f.frame = Frame(cursor)
-
-            if (f.frame == None):
+            if f.frame == None:
                 return f
 
             if not f.frame.recordingid in self.recordings_list:
-                temp_rec = next(Recording.query(
-                    self.recordings, id=f.frame.recordingid))
+                temp_rec = next(
+                    Recording.query(self.recordings, id=f.frame.recordingid)
+                )
                 self.recordings.get_setup(temp_rec)
                 self.recordings_list[f.frame.recordingid] = temp_rec
 
@@ -476,9 +521,12 @@ class FrameMatchedIterator:
             raise StopIteration
 
     def add_metadata_from_remote_db(self, f, keys):
-        iie_query = "select * from frames,image_index_entries where image_index_entries.frame_id = " + \
-            str(f.frame.id) + " and frames.recordingid = " + \
-            str(f.recording.id)
+        iie_query = (
+            "select * from frames,image_index_entries where image_index_entries.frame_id = "
+            + str(f.frame.id)
+            + " and frames.recordingid = "
+            + str(f.recording.id)
+        )
 
         __cursor__ = self.connection.cursor()
         __cursor__.execute(iie_query)
@@ -489,4 +537,4 @@ class FrameMatchedIterator:
 
         for k in keys:
             if k in row:
-                f.metadata["image_index_entries."+k] = row[k]
+                f.metadata["image_index_entries." + k] = row[k]

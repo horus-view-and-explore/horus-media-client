@@ -8,8 +8,15 @@ import logging
 import itertools
 
 from horus_db import Frames, Frame
-from horus_media import Client, ImageRequestBuilder, ImageProvider, Size, Direction, \
-    ComputationRequestBuilder, ComputationProvider
+from horus_media import (
+    Client,
+    ImageRequestBuilder,
+    ImageProvider,
+    Size,
+    Direction,
+    ComputationRequestBuilder,
+    ComputationProvider,
+)
 from horus_gis import PositionVector, Geographic
 
 from . import util
@@ -20,15 +27,23 @@ parser = util.create_argument_parser()
 util.add_database_arguments(parser)
 util.add_server_arguments(parser)
 util.add_size_argument(parser, (1024, 1024))
-parser.add_argument("-hf", "--horizontal-fov", type=float, default=(90),
-                    help="horizontal field of view size in degrees")
-parser.add_argument("-o", "--overlap", type=float, default=(20),
-                    help="horizontal overlap in degrees")
+parser.add_argument(
+    "-hf",
+    "--horizontal-fov",
+    type=float,
+    default=(90),
+    help="horizontal field of view size in degrees",
+)
+parser.add_argument(
+    "-o", "--overlap", type=float, default=(20), help="horizontal overlap in degrees"
+)
 parser.add_argument("--path", type=str, help="path to output location")
-parser.add_argument("--limit", metavar=("NUMBER"), type=int,
-                    help="maximum number of frames")
-parser.add_argument("-r", "--recording", metavar="ID",
-                    nargs='*', type=int, help="recording id")
+parser.add_argument(
+    "--limit", metavar=("NUMBER"), type=int, help="maximum number of frames"
+)
+parser.add_argument(
+    "-r", "--recording", metavar="ID", nargs="*", type=int, help="recording id"
+)
 
 
 args = parser.parse_args()
@@ -80,17 +95,21 @@ csv_header = [
     "Longitude",
     "Pitch",
     "Roll",
-    "Stamp"
+    "Stamp",
 ]
 
 
 # Open output csv file
-with open(os.path.join(output_path, 'output.csv'), 'w', newline='') as csvfile:
+with open(os.path.join(output_path, "output.csv"), "w", newline="") as csvfile:
     writer = csv.writer(csvfile, quoting=csv.QUOTE_MINIMAL)
     writer.writerow(csv_header)
 
     # Get frames
-    results = Frame.query(frames, recordingid=recording_id, order_by="index",)
+    results = Frame.query(
+        frames,
+        recordingid=recording_id,
+        order_by="index",
+    )
     if args.limit:
         results = itertools.islice(results, args.limit)
     for frame in results:
@@ -104,28 +123,31 @@ with open(os.path.join(output_path, 'output.csv'), 'w', newline='') as csvfile:
         # Set parameters
         request_builder = ImageRequestBuilder(frame.recordingid, frame.uuid)
         for direction_id, direction in directions.items():
-            request = client.fetch(request_builder.build_spherical(
-                size, direction, horizontal_fov))
+            request = client.fetch(
+                request_builder.build_spherical(size, direction, horizontal_fov)
+            )
             result = image_provider.fetch(request)
 
             # Save the file
             filename = "{}_{}.jpg".format(frame.index, direction_id)
 
-            with open(os.path.join(output_path, filename), 'wb') as image_file:
+            with open(os.path.join(output_path, filename), "wb") as image_file:
                 image_file.write(result.image.getvalue())
                 result.image.close()
 
             # Compute accurate position with lever arm.
-            position = get_position_vector(
-                frame, size, direction, horizontal_fov)
+            position = get_position_vector(frame, size, direction, horizontal_fov)
 
-            writer.writerow([
-                filename,
-                frame.index,
-                position.alt,
-                frame.azimuth,
-                position.lat,
-                position.lon,
-                frame.pitch,
-                frame.roll,
-                frame.stamp.isoformat()])
+            writer.writerow(
+                [
+                    filename,
+                    frame.index,
+                    position.alt,
+                    frame.azimuth,
+                    position.lat,
+                    position.lon,
+                    frame.pitch,
+                    frame.roll,
+                    frame.stamp.isoformat(),
+                ]
+            )

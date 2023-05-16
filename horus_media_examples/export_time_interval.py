@@ -13,13 +13,25 @@ from . import util
 parser = util.create_argument_parser()
 util.add_database_arguments(parser)
 util.add_server_arguments(parser)
-parser.add_argument("-t", "--time",  metavar=("START", "END"), nargs=2, type=str,
-                    help="time interval to query. E.g. '2022-02-13T14:30:00' '2022-02-13T15:00:00'")
+parser.add_argument(
+    "-t",
+    "--time",
+    metavar=("START", "END"),
+    nargs=2,
+    type=str,
+    help="time interval to query. E.g. '2022-02-13T14:30:00' '2022-02-13T15:00:00'",
+)
 parser.add_argument("--path", type=str, help="path to output location")
-parser.add_argument("--limit", metavar=("NUMBER"), type=int, default=100,
-                    help="maximum number of frames")
-parser.add_argument("-r", "--recording", metavar="ID",
-                    nargs='*', type=int, help="recording id")
+parser.add_argument(
+    "--limit",
+    metavar=("NUMBER"),
+    type=int,
+    default=100,
+    help="maximum number of frames",
+)
+parser.add_argument(
+    "-r", "--recording", metavar="ID", nargs="*", type=int, help="recording id"
+)
 
 
 args = parser.parse_args()
@@ -46,14 +58,15 @@ recording_id = tuple(args.recording) if args.recording != None else None
 
 
 # Get frames
-results = Frame.query(frames,
-                      # tuple of timestamp strings (begin, end)in ISO format
-                      time_interval=args.time,
-                      # recording id (optional)
-                      recordingid=recording_id,
-                      order_by="index",
-                      limit=args.limit,
-                      )
+results = Frame.query(
+    frames,
+    # tuple of timestamp strings (begin, end)in ISO format
+    time_interval=args.time,
+    # recording id (optional)
+    recordingid=recording_id,
+    order_by="index",
+    limit=args.limit,
+)
 
 for frame in results:
     if frame is None:
@@ -64,14 +77,12 @@ for frame in results:
 
     # Get the image
     request_builder = ImageRequestBuilder(frame.recordingid, frame.uuid)
-    request = client.fetch(request_builder.build(
-        Mode.panoramic, Scales.Px_1024))
+    request = client.fetch(request_builder.build(Mode.panoramic, Scales.Px_1024))
     result = image_provider.fetch(request)
 
     # Save the file
-    filename = "{}_{}_{}.jpg".format(
-        frame.recordingid, frame.index, frame.stamp)
+    filename = "{}_{}_{}.jpg".format(frame.recordingid, frame.index, frame.stamp)
 
-    with open(os.path.join(output_path, filename), 'wb') as image_file:
+    with open(os.path.join(output_path, filename), "wb") as image_file:
         image_file.write(result.image.getvalue())
         result.image.close()

@@ -1,4 +1,3 @@
-
 # Copyright(C) 2019, 2020 Horus View and Explore B.V.
 
 import unittest
@@ -12,11 +11,11 @@ from horus_db import Iterator
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb"
+    )
 
 
 class TestRecordings(unittest.TestCase):
-
     def test_get(self):
         connection = get_connection()
         recording_id = 5
@@ -24,9 +23,13 @@ class TestRecordings(unittest.TestCase):
         recording = Recording(recordings.get(recording_id))
         self.assertEqual(recording.id, 5)
         self.assertEqual(
-            recording.directory, "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08")
-        self.assertEqual(recording.bounding_box,
-                         "BOX(4.461778927 51.892380339,4.497248851 51.930770724)")
+            recording.directory,
+            "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08",
+        )
+        self.assertEqual(
+            recording.bounding_box,
+            "BOX(4.461778927 51.892380339,4.497248851 51.930770724)",
+        )
         self.assertEqual(recording.file_format, 1)
 
         self.assertEqual(recording.setup, None)
@@ -45,27 +48,35 @@ class TestRecordings(unittest.TestCase):
     def test_get_with_directory(self):
         connection = get_connection()
         recordings = Recordings(connection)
-        results = list(Recording.query(
-            recordings, directory_like="Rotterdam360", order_by="id"))
+        results = list(
+            Recording.query(recordings, directory_like="Rotterdam360", order_by="id")
+        )
 
         self.assertEqual(len(results), 2)
         self.assertEqual(results[0].id, 4)
         self.assertEqual(
-            results[0].directory, "D:\\Recordings\\DemoData\\Rotterdam360\\GoProMax\\Recording2019-12-18_12-53-06")
+            results[0].directory,
+            "D:\\Recordings\\DemoData\\Rotterdam360\\GoProMax\\Recording2019-12-18_12-53-06",
+        )
 
         self.assertEqual(results[1].id, 5)
         self.assertEqual(
-            results[1].directory, "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08")
+            results[1].directory,
+            "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08",
+        )
 
     def test_get_with_directory_single(self):
         connection = get_connection()
         recordings = Recordings(connection)
-        recording = next(Recording.query(
-            recordings, directory_like="Rotterdam360\\\\Ladybug5plus"))
+        recording = next(
+            Recording.query(recordings, directory_like="Rotterdam360\\\\Ladybug5plus")
+        )
 
         self.assertEqual(recording.id, 5)
         self.assertEqual(
-            recording.directory, "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08")
+            recording.directory,
+            "D:\\Recordings\\DemoData\\Rotterdam360\\Ladybug5plus\\Recording_18-12-2019_12-03-08",
+        )
 
     def test_query(self):
         connection = get_connection()
@@ -103,7 +114,6 @@ class TestRecordings(unittest.TestCase):
 
 
 class TestFrames(unittest.TestCase):
-
     def test_query(self):
         connection = get_connection()
 
@@ -112,8 +122,7 @@ class TestFrames(unittest.TestCase):
         distance = 2  # in meters
 
         frames = Frames(connection)
-        cursor = frames.query(within=(point, distance),
-                              recordingid=recordings, limit=1)
+        cursor = frames.query(within=(point, distance), recordingid=recordings, limit=1)
         self.assertIsNotNone(cursor)
 
         frame = Frame(cursor)
@@ -146,9 +155,9 @@ class TestFrames(unittest.TestCase):
         frames = Frames(connection)
         cursor = frames.query(
             within=(point, distance_max),
-            distance=(point,  "> %s", distance_min),
+            distance=(point, "> %s", distance_min),
             recordingid=recordings,
-            limit=1
+            limit=1,
         )
         self.assertIsNotNone(cursor)
 
@@ -160,8 +169,9 @@ class TestFrames(unittest.TestCase):
         distance = 2  # in meters
 
         frames = Frames(connection)
-        cursor = frames.query(within=(point, distance),
-                              recordingid=recordings, limit=3, offset=1)
+        cursor = frames.query(
+            within=(point, distance), recordingid=recordings, limit=3, offset=1
+        )
         self.assertIsNotNone(cursor)
 
         frame = Frame(cursor)
@@ -172,5 +182,5 @@ class TestFrames(unittest.TestCase):
         self.assertEqual(frame.uuid, "9089f29d-9437-4a3c-bd88-ed9e27445289")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     unittest.main()

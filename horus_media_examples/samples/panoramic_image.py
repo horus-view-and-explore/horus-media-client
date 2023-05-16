@@ -3,9 +3,17 @@
 import psycopg2
 
 from horus_db import Frames, Frame
-from horus_media import Client, ImageRequestBuilder, ImageProvider, Mode, Scales, Direction
+from horus_media import (
+    Client,
+    ImageRequestBuilder,
+    ImageProvider,
+    Mode,
+    Scales,
+    Direction,
+)
 
 from .. import util
+
 util.sample_script_header(__name__)
 
 # This example shows how to request a panoramic image
@@ -13,7 +21,8 @@ util.sample_script_header(__name__)
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb"
+    )
 
 
 connection = get_connection()
@@ -40,6 +49,6 @@ result = image_provider.fetch(request)
 # Save the file
 filename = ".\\panoramic_{}.jpg".format(frame.index)
 
-with open(filename, 'wb') as f:
+with open(filename, "wb") as f:
     f.write(result.image.getvalue())
     result.image.close()

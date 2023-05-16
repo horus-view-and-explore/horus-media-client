@@ -4,12 +4,16 @@ import os
 
 single_measurement_path = "output/single_measurement_clusters.shp"
 if not os.path.exists(single_measurement_path):
-    print(f"File '{single_measurement_path}' not found.\nRun 'horus_media_examples.spherical_camera_single_measurement' first.")
+    print(
+        f"File '{single_measurement_path}' not found.\nRun 'horus_media_examples.spherical_camera_single_measurement' first."
+    )
     exit(1)
 
 cluster_locations_path = "output/cluster_locations.shp"
 if not os.path.exists(cluster_locations_path):
-    print(f"File '{cluster_locations_path}' not found.\nRun 'horus_media_examples.triangulate_spherical_camera_singlemeasurement_clusters' first.")
+    print(
+        f"File '{cluster_locations_path}' not found.\nRun 'horus_media_examples.triangulate_spherical_camera_singlemeasurement_clusters' first."
+    )
     exit(1)
 
 ca = Clustering_analysis()

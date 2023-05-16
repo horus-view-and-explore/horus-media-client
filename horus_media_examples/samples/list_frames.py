@@ -5,6 +5,7 @@ import psycopg2
 from horus_db import Frames, Recordings, Frame, Recording
 
 from .. import util
+
 util.sample_script_header(__name__)
 
 # This example shows how to iterate over all the frames in a recording
@@ -12,7 +13,8 @@ util.sample_script_header(__name__)
 
 def get_connection():
     return psycopg2.connect(
-        "dbname=HorusWebMoviePlayer user=postgres password=horusweb")
+        "dbname=HorusWebMoviePlayer user=postgres password=horusweb"
+    )
 
 
 connection = get_connection()
@@ -35,5 +37,14 @@ cursor = frames.query(recordingid=recording.id)
 frame = Frame(cursor)
 
 while frame is not None:
-    print(" ", frame.recordingid, " ", frame.uuid, " ", frame.longitude, " ", frame.latitude)
+    print(
+        " ",
+        frame.recordingid,
+        " ",
+        frame.uuid,
+        " ",
+        frame.longitude,
+        " ",
+        frame.latitude,
+    )
     frame = Frame(cursor)

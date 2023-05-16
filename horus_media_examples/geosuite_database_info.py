@@ -14,7 +14,7 @@ if not path.exists(sqlite_file):
 db = horus_spatialite.Spatialite(sqlite_file)
 
 for arg in sys.argv[2:]:
-    db.blob_contains_geometry(arg) 
+    db.blob_contains_geometry(arg)
 
 db.open()
 db.resolve()

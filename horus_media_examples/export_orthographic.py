@@ -20,10 +20,12 @@ util.add_size_argument(parser, (4096, 2048))
 util.add_geometry_arguments(parser)
 
 parser.add_argument("--path", type=str, help="path to output location")
-parser.add_argument("--limit", metavar=("NUMBER"), type=int,
-                    help="maximum number of frames")
-parser.add_argument("-r", "--recording", metavar="ID",
-                    nargs='*', type=int, help="recording id")
+parser.add_argument(
+    "--limit", metavar=("NUMBER"), type=int, help="maximum number of frames"
+)
+parser.add_argument(
+    "-r", "--recording", metavar="ID", nargs="*", type=int, help="recording id"
+)
 
 args = parser.parse_args()
 
@@ -48,7 +50,11 @@ recording_id = tuple(args.recording) if args.recording != None else None
 
 
 # Get frames
-results = Frame.query(frames, recordingid=recording_id, order_by="index",)
+results = Frame.query(
+    frames,
+    recordingid=recording_id,
+    order_by="index",
+)
 if args.limit:
     results = itertools.islice(results, args.limit)
 for frame in results:
@@ -69,12 +75,11 @@ for frame in results:
     else:
         geometry = util.get_geometry(args)
 
-    request = client.fetch(
-        request_builder.build_orthographic(size, geometry))
+    request = client.fetch(request_builder.build_orthographic(size, geometry))
 
     result = image_provider.fetch(request)
     # Save the file
     filename = "orthographic_{}.tif".format(frame.index)
-    with open(os.path.join(output_path, filename), 'wb') as image_file:
+    with open(os.path.join(output_path, filename), "wb") as image_file:
         image_file.write(result.image.getvalue())
         result.image.close()

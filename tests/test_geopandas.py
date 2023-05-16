@@ -15,24 +15,39 @@ try:
 except OSError:
     pass
 
+
 class TestTriangulation(unittest.TestCase):
     def test_triangulation_examples(self):
         # import horus_media_examples.spherical_camera_single_measurement
         try:
             import horus_media_examples.single_measurement_clustering
         except Exception as e:
-            self.fail("{} failed ({}: {})".format("horus_media_examples.single_measurement_clustering", type(e), e))
+            self.fail(
+                "{} failed ({}: {})".format(
+                    "horus_media_examples.single_measurement_clustering", type(e), e
+                )
+            )
         try:
             import horus_media_examples.triangulate_spherical_camera_single_measurement_clusters
         except Exception as e:
-            self.fail("{} failed ({}: {})".format("horus_media_examples.triangulate_spherical_camera_single_measurement_clusters", type(e), e))
+            self.fail(
+                "{} failed ({}: {})".format(
+                    "horus_media_examples.triangulate_spherical_camera_single_measurement_clusters",
+                    type(e),
+                    e,
+                )
+            )
         try:
             import horus_media_examples.clustering_analytics
         except Exception as e:
-            self.fail("{} failed ({}: {})".format("horus_media_examples.clustering_analytics", type(e), e))
+            self.fail(
+                "{} failed ({}: {})".format(
+                    "horus_media_examples.clustering_analytics", type(e), e
+                )
+            )
+
 
 class TestHorusGeoDataFrame(unittest.TestCase):
-
     def __init__(self, *args, **kwargs):
         super(TestHorusGeoDataFrame, self).__init__(*args, **kwargs)
         # Obtain schema
@@ -48,8 +63,8 @@ class TestHorusGeoDataFrame(unittest.TestCase):
         # Record
         record["rec_id"] = 1
         record["frame_idx"] = 2
-        record['azimuth'] = 3
-        record['usr_id'] = 4
+        record["azimuth"] = 3
+        record["usr_id"] = 4
         #
         record["cam_fov"] = 90.0
         record["cam_yaw"] = 20.0
@@ -83,11 +98,15 @@ class TestHorusGeoDataFrame(unittest.TestCase):
 
         self.database.add_frame(record)
 
-        self.database.write_shapefile(os.path.join(
-            output_dir, "single_measurement.shp"))
+        self.database.write_shapefile(
+            os.path.join(output_dir, "single_measurement.shp")
+        )
 
-        self.database.write_geojson(os.path.join(
-            output_dir, "single_measurement.geojson"))
+        self.database.write_geojson(
+            os.path.join(output_dir, "single_measurement.geojson")
+        )
 
-        self.database.write_geopackage(os.path.join(
-            output_dir, "single_measurement.gpkg"), layer='singlemeasurement')
+        self.database.write_geopackage(
+            os.path.join(output_dir, "single_measurement.gpkg"),
+            layer="singlemeasurement",
+        )

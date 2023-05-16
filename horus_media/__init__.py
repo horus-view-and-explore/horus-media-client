@@ -51,9 +51,12 @@ class Box:
     def create(cls, center, width=0, height=0):
         if not isinstance(center, Point):
             center = Point(*center)
-        x_interval = (center.x + width/2, center.x - width/2)
-        y_interval = (center.y + height/2, center.y - height/2)
-        return Box(Point(min(x_interval), min(y_interval)), Point(max(x_interval), max(y_interval)))
+        x_interval = (center.x + width / 2, center.x - width / 2)
+        y_interval = (center.y + height / 2, center.y - height / 2)
+        return Box(
+            Point(min(x_interval), min(y_interval)),
+            Point(max(x_interval), max(y_interval)),
+        )
 
 
 @dataclass(frozen=True)
@@ -66,25 +69,25 @@ class Section:
 
 
 class Grid:
-    """ Grid  8x4 (c x r) """
+    """Grid  8x4 (c x r)"""
 
     def __init__(self, w_min=-180, w_max=180, h_min=-90, h_max=90, r=4, c=8):
         assert w_min < w_max
         assert h_min < h_max
         self.rows = r
         self.cols = c
-        self.section_height = (h_max - h_min)/r
-        self.section_width = (w_max - w_min)/c
+        self.section_height = (h_max - h_min) / r
+        self.section_width = (w_max - w_min) / c
         self.__map = {}
         for index in range(r * c):
             x = index % c
-            y = (r-1) - index // c
-            ax = x*self.section_width - w_max
-            ay = y*self.section_height - h_max
+            y = (r - 1) - index // c
+            ax = x * self.section_width - w_max
+            ay = y * self.section_height - h_max
             self.__map[index] = Section(x, y, ax, ay, index)
 
     def __iter__(self):
-        """ Returns the Iterator object """
+        """Returns the Iterator object"""
         return (section for section in self.__map.values())
 
     def __str__(self):
@@ -134,18 +137,17 @@ class Grid:
         if w_max_wrapped > 180:
             w_max_wrapped = -360 + w_max_wrapped
 
-        h = self.Comparator(h_min,  h_max, self.section_height)
+        h = self.Comparator(h_min, h_max, self.section_height)
         if w_min_wrapped < w_max_wrapped:
-            w = self.Comparator(
-                w_min_wrapped,  w_max_wrapped, self.section_width)
+            w = self.Comparator(w_min_wrapped, w_max_wrapped, self.section_width)
             for section in self.__map.values():
                 if section.ay in h and section.ax in w:
                     yield section
         elif w_min_wrapped > w_max_wrapped:
             assert w_max_wrapped >= -180
             assert w_min_wrapped <= 180
-            w_left = self.Comparator(-180,  w_max_wrapped, self.section_width)
-            w_right = self.Comparator(w_min_wrapped,  180, self.section_width)
+            w_left = self.Comparator(-180, w_max_wrapped, self.section_width)
+            w_right = self.Comparator(w_min_wrapped, 180, self.section_width)
             for section in self.__map.values():
                 if section.ay in h and (section.ax in w_left or section.ax in w_right):
                     yield section
@@ -175,7 +177,7 @@ class Scales:
 
     @classmethod
     def from_size(cls, size):
-        """ Returns the closest round-up scale that contains the requested size.
+        """Returns the closest round-up scale that contains the requested size.
         Returns None if no applicable scale is found.
         """
         result = cls.__SCALES[-1]
@@ -184,6 +186,7 @@ class Scales:
                 return result
             result = scale
         return result
+
 
 class Mode(Enum):
     panoramic = 0
@@ -194,15 +197,18 @@ class Mode(Enum):
     def __str__(self):
         return self.name
 
+
 @dataclass(frozen=True)
 class Size:
     width: int
     height: int
 
+
 @dataclass(frozen=True)
 class Direction:
     yaw: float
     pitch: float
+
 
 @dataclass(frozen=True)
 class Geometry:
@@ -213,19 +219,20 @@ class Geometry:
     shift: float
     altitude: float
 
+
 class Client:
     def __init__(self, url="http://localhost:5050/web/", timeout=4):
         self.url = url
         self.__parsed_url = urllib.parse.urlparse(url)
         self.__connection = http.client.HTTPConnection(
-            self.__parsed_url.hostname, self.__parsed_url.port, timeout=timeout)
+            self.__parsed_url.hostname, self.__parsed_url.port, timeout=timeout
+        )
         self.__connection.connect()
         self.attempts = 5
-        self.attempts_interval = 3 #seconds
+        self.attempts_interval = 3  # seconds
 
     def fetch(self, request):
-        request.url = urllib.parse.urljoin(
-            self.__parsed_url.path, request.resource)
+        request.url = urllib.parse.urljoin(self.__parsed_url.path, request.resource)
         self.__connection.request("GET", request.url)
         attempts = self.attempts
         while attempts > 0:
@@ -235,7 +242,7 @@ class Client:
                 attempts = 0
             except Exception as exception:
                 logging.error(f'{exception}. Requesting "{request.url}".')
-                logging.error(f'New attempt in {self.attempts_interval}s .')
+                logging.error(f"New attempt in {self.attempts_interval}s .")
                 time.sleep(self.attempts_interval)
 
         request.response = response
@@ -256,7 +263,19 @@ class Client:
 
 
 class ImageRequest:
-    def __init__(self, builder, resource, mode=None, scale=None, section=None, size=None, direction=None, fov=None, cams = None, geometry=None):
+    def __init__(
+        self,
+        builder,
+        resource,
+        mode=None,
+        scale=None,
+        section=None,
+        size=None,
+        direction=None,
+        fov=None,
+        cams=None,
+        geometry=None,
+    ):
         self.local_file = None
         self.builder = builder
         self.resource = resource
@@ -277,6 +296,7 @@ class ImageRequest:
 
     def result(self):
         return self.__result
+
     def __repr__(self):
         cls = type(self)
         return f"{cls.__name__}({self.url})"
@@ -297,16 +317,30 @@ class ImageRequestBuilder:
         return self.build(Mode.spherical, None, None, size, direction, vof, cams, None)
 
     def build_orthographic(self, size, geometry):
-        return self.build(Mode.orthographic, None, None, size, None, None, None, geometry)
+        return self.build(
+            Mode.orthographic, None, None, size, None, None, None, geometry
+        )
 
     def build_geographic(self, size, direction=None, vof=None, x=None, y=None):
         if x and y:
             geometry = Geometry(0, x, y, 0, 0, 0)
         else:
             geometry = None
-        return self.build(Mode.geographic, None, None, size, direction, vof, None, geometry)
+        return self.build(
+            Mode.geographic, None, None, size, direction, vof, None, geometry
+        )
 
-    def build(self, mode=None, scale=None, section=None, size=None, direction=None, fov=None, cams=None, geometry=None):
+    def build(
+        self,
+        mode=None,
+        scale=None,
+        section=None,
+        size=None,
+        direction=None,
+        fov=None,
+        cams=None,
+        geometry=None,
+    ):
         data = {}
         if mode is not None:
             data["mode"] = mode
@@ -315,7 +349,7 @@ class ImageRequestBuilder:
         if section is not None:
             data["section"] = section.index
         if size is not None:
-            data["size"] = str(size.width) + 'x' + str(size.height)
+            data["size"] = str(size.width) + "x" + str(size.height)
         if direction is not None:
             data["yaw"] = direction.yaw
             data["pitch"] = direction.pitch
@@ -333,12 +367,19 @@ class ImageRequestBuilder:
                 data["alti_next"] = geometry.altitude
         url_values = urllib.parse.urlencode(data)
         url = urllib.parse.urljoin(self.__resource, "?" + url_values)
-        request = ImageRequest(self, url, mode, scale, section, size, direction, fov, cams, geometry)
+        request = ImageRequest(
+            self, url, mode, scale, section, size, direction, fov, cams, geometry
+        )
         if self.path_template:
             request.local_file = self.path_template.format(
-                recording=self.recording, frame=self.frame, mode=mode if mode else "", 
-                scale=scale.id if scale else "", section=section.index if section else "")
+                recording=self.recording,
+                frame=self.frame,
+                mode=mode if mode else "",
+                scale=scale.id if scale else "",
+                section=section.index if section else "",
+            )
         return request
+
 
 class ImageProvider:
     @dataclass(frozen=True)
@@ -353,22 +394,30 @@ class ImageProvider:
             the components of thepoint represent two angles (in Grid space)
             """
             px, py = point
-            py = (py/py*(py % 90) if py != 0 else 0) + 90
-            dy = 180 - (self.fov.y/self.fov.y*(self.fov.y % 90) if self.fov.y != 0 else 0)
-            y = (1 + (py - dy)/self.fov.height)*self.h
+            py = (py / py * (py % 90) if py != 0 else 0) + 90
+            dy = 180 - (
+                self.fov.y / self.fov.y * (self.fov.y % 90) if self.fov.y != 0 else 0
+            )
+            y = (1 + (py - dy) / self.fov.height) * self.h
 
-            px = (px/px*(px % 180) if px != 0 else 0) + 180
-            dx = (self.fov.x/self.fov.x*(self.fov.x % 180) if self.fov.x != 0 else 0) + 180
-            x = (px - dx)/self.fov.width*self.w
+            px = (px / px * (px % 180) if px != 0 else 0) + 180
+            dx = (
+                self.fov.x / self.fov.x * (self.fov.x % 180) if self.fov.x != 0 else 0
+            ) + 180
+            x = (px - dx) / self.fov.width * self.w
 
-            return Point(math.floor(x),math.floor(y))
+            return Point(math.floor(x), math.floor(y))
 
     def __init__(self, grid=Grid()):
         self.grid = grid
 
-    def fetch(self, image_request, w = None, h = None):
-        return self.Result(io.BytesIO(image_request.result()), 
-            Rect(0, 0, w, h) if w and h else Rect(0, 0, 1, 1), w if w else 0, h if h else 0)
+    def fetch(self, image_request, w=None, h=None):
+        return self.Result(
+            io.BytesIO(image_request.result()),
+            Rect(0, 0, w, h) if w and h else Rect(0, 0, 1, 1),
+            w if w else 0,
+            h if h else 0,
+        )
 
     def combine(self, image_requests, w, h):
         rows = set()
@@ -382,7 +431,7 @@ class ImageProvider:
         col_map = self.set_to_map(self.wrap(sorted(cols)))
         row_index_shift = len(rows) - 1
 
-        stitched = Image.new('RGB', (w * len(col_map), h * len(row_map)))
+        stitched = Image.new("RGB", (w * len(col_map), h * len(row_map)))
         fov = Rect(math.inf, math.inf, 0, 0)
         fov.width = len(col_map) * self.grid.section_width
         fov.height = len(row_map) * self.grid.section_height
@@ -397,9 +446,11 @@ class ImageProvider:
                 image = Image.open(io.BytesIO(req.result()))
                 stitched.paste(image, (c * w, (row_index_shift - r) * h))
             except Exception as exception:
-                logging.error(f"{exception}. Stitching section {req.section} from {req.url}")
-        image = io.BytesIO();
-        stitched.save(image, format='jpeg', quality=95)
+                logging.error(
+                    f"{exception}. Stitching section {req.section} from {req.url}"
+                )
+        image = io.BytesIO()
+        stitched.save(image, format="jpeg", quality=95)
         return self.Result(image, fov, stitched.width, stitched.height)
 
     @classmethod
@@ -422,12 +473,23 @@ class ImageProvider:
         size = len(my_set)
         if size > 0:
             mx = min(my_set)
-            mp = range(size+1)
+            mp = range(size + 1)
             return dict(zip(my_set, mp))
         return {}
 
+
 class ComputationRequest:
-    def __init__(self, builder, resource, size=None, direction=None, fov=None, x=None, y=None, direction0=None):
+    def __init__(
+        self,
+        builder,
+        resource,
+        size=None,
+        direction=None,
+        fov=None,
+        x=None,
+        y=None,
+        direction0=None,
+    ):
         self.local_file = None
         self.builder = builder
         self.resource = resource
@@ -447,8 +509,9 @@ class ComputationRequest:
     def result(self):
         return self.__result
 
+
 class ComputationRequestBuilder:
-    def __init__(self, method, frame = None):
+    def __init__(self, method, frame=None):
         self.path_template = None
         self.method = method
         self.frame = frame
@@ -456,10 +519,12 @@ class ComputationRequestBuilder:
         if frame != None:
             self.__resource += f"/{frame}"
 
-    def build(self, size=None, direction=None, fov=None, x=None, y=None, direction0=None):
+    def build(
+        self, size=None, direction=None, fov=None, x=None, y=None, direction0=None
+    ):
         data = {}
         if size is not None:
-            data["size"] = str(size.width) + 'x' + str(size.height)
+            data["size"] = str(size.width) + "x" + str(size.height)
         if direction is not None:
             data["yaw"] = direction.yaw
             data["pitch"] = direction.pitch
@@ -479,6 +544,7 @@ class ComputationRequestBuilder:
         url = urllib.parse.urljoin(self.__resource, "?" + url_values)
         return ComputationRequest(self, url, size, direction, fov, x, y, direction0)
 
+
 class ComputationProvider:
     @dataclass(frozen=True)
     class Result:
@@ -486,8 +552,9 @@ class ComputationProvider:
 
     def fetch(self, computation_request):
         try:
-            result = self.Result(io.BytesIO(
-                computation_request.result())).data.getvalue()
+            result = self.Result(
+                io.BytesIO(computation_request.result())
+            ).data.getvalue()
             return json.loads(result)
         except json.decoder.JSONDecodeError as error:
             return {"error": error}
