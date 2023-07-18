@@ -1,6 +1,6 @@
 from horus_camera import SphericalCamera
 from horus_gis import GeographicLocation
-from horus_db import Recordings, Frames, Frame
+from horus_db import Frames, Frame
 from horus_spatialite import Spatialite, FrameMatchedIterator
 from pyproj import Geod
 from horus_geometries import Geometry_proj
@@ -13,47 +13,40 @@ import math
 
 from . import util
 
+
 parser = util.create_argument_parser()
-
 parser.add_argument("--sqlite-db", type=str, help="the geosuite_database name")
-
 parser.add_argument(
     "--sqlite-framenr", type=str, help="the field specifying the framenr"
 )
-
 parser.add_argument(
     "--sqlite-recording", type=str, help="the field specifying the recordingname"
 )
-
 parser.add_argument(
     "--sqlite-geometry",
     type=str,
     help="the field specifying an alternative geometry blob",
 )
-
 # Not tested
 parser.add_argument(
     "--recordings-on-disk", type=str, help="Optionally provide a recording folder"
 )
-
 # Not tested
 parser.add_argument(
     "--recording-id", type=int, help="Optionally provide a the static recording id."
 )
-
-
 util.add_database_arguments(parser)
 util.add_server_arguments(parser)
 
-
 args = parser.parse_args()
-client = util.get_client(args)
-connection = util.get_connection(args)
-recordings = Recordings(connection)
-
 if args.sqlite_db is None:
     print("A sqlite database should be provided")
     exit()
+
+connection = util.get_connection(args)
+
+sp_camera = SphericalCamera()
+sp_camera.set_network_client(util.get_client(args))
 
 # sqlite_frame_idx_field = "Frame_numb"
 output_database = None
@@ -129,7 +122,7 @@ class Look_at:
         return self.gp.to_geographic(self.geometry)
 
 
-def add_to_output(frame, geometry, filename, nr, matched_frame):
+def add_to_output(db, frame, geometry, filename, error, sub_id, matched_frame):
     """
     Add the current geometry and attributes to the output database
     """
@@ -138,11 +131,14 @@ def add_to_output(frame, geometry, filename, nr, matched_frame):
     record = {}
     record["geometry"] = gpd.GeoSeries(geometry)
     record["snapshot"] = filename
-    record["sub_id"] = nr
-    record["frame_index"] = frame.index
-    record["recording_id"] = frame.recordingid
-    record["distance"] = geod.line_length(
-        *zip(*[frame.get_location()[:2], geometry.centroid.coords[0]])
+    record["snapshot_error"] = error
+    record["sub_id"] = sub_id
+    record["frame_index"] = frame.index if frame else None
+    record["recording_id"] = frame.recordingid if frame else None
+    record["distance"] = (
+        geod.line_length(*zip(*[frame.get_location()[:2], geometry.centroid.coords[0]]))
+        if frame
+        else None
     )
 
     for k, v in matched_frame.metadata.items():
@@ -160,21 +156,24 @@ def try_find_frame(geometry, mf: FrameMatchedIterator.MatchedFrame):
     """
     Try to find a frame from the same recording that is within (DISTANCE_MIN, DISTANCE_MAX)
     """
-    frames = Frames(connection)
-    cursor = frames.query(
-        within=(*geometry.centroid.coords, DISTANCE_MAX),
-        recordingid=mf.recording.id,
-        distance=(*geometry.centroid.coords, "> %s", DISTANCE_MIN),
-        limit=FRAME_LIMIT,
-    )
-    return GEOM_HEADING_FRAME_SELECTOR(geometry, cursor)
+    if mf.recording == None:
+        return None
+    else:
+        frames = Frames(connection)
+        cursor = frames.query(
+            within=(*geometry.centroid.coords, DISTANCE_MAX),
+            recordingid=mf.recording.id,
+            distance=(*geometry.centroid.coords, "> %s", DISTANCE_MIN),
+            limit=FRAME_LIMIT,
+        )
+        return GEOM_HEADING_FRAME_SELECTOR(geometry, cursor)
 
 
 def look_at_point(point, mf: FrameMatchedIterator.MatchedFrame, side):
     """
-    Transforms a 'Point' geometry into a square of sides 'side'x'side'
-    in meters
+    Transform a 'Point' geometry into a square of sides 'side'x'side' in meters.
     """
+    assert point.geom_type == "Point"
     gp = Geometry_proj()
     square = gp.point_to_square(point, side)
     return [Look_at(mf.frame, square)]
@@ -187,9 +186,9 @@ def look_at_linestring(
     offset,
 ):
     """
-    Transforms a 'LineString' geometry into sub LineStrings of maximum length
-    of 'max_length' in meters.
+    Transform a 'LineString' geometry into sub LineStrings of maximum length of 'max_length' in meters.
     """
+    assert linestring.geom_type == "LineString"
     gp = Geometry_proj()
 
     if geod.geometry_length(linestring) > max_length:
@@ -213,24 +212,24 @@ def look_at_linestring(
 
 def look_at_polygon(polygon, mf: FrameMatchedIterator.MatchedFrame):
     """
-    Transforms a 'Polygon' geometry into a collection of Polygons..
+    Transform a 'Polygon' geometry into a collection of Polygons.
     """
+    assert polygon.geom_type == "Polygon"
     return [Look_at(mf.frame, polygon)]
 
 
-def take_snapshot(db, mf: FrameMatchedIterator.MatchedFrame, geod):
-    geometries = []
-    geo = db.get_geometry(mf.spatialite_cursor)[db.geometry_field_name]
+def take_snapshot(db, mf: FrameMatchedIterator.MatchedFrame):
+    geometry = db.get_geometry(mf.spatialite_cursor)[db.geometry_field_name]
 
-    if geo.geom_type.startswith("Multi"):
-        for g in geo.geoms:
-            geometries.append(g)
+    geometries = []
+    if geometry.geom_type.startswith("Multi"):
+        for geom in geometry.geoms:
+            geometries.append(geom)
     else:
-        geometries.append(geo)
+        geometries.append(geometry)
 
     width = 800
     look_at_all: [Look_at] = []
-
     for geom in geometries:
         if geom.geom_type == "Polygon":
             look_at_all = [*look_at_all, *look_at_polygon(geom, mf)]
@@ -245,88 +244,81 @@ def take_snapshot(db, mf: FrameMatchedIterator.MatchedFrame, geod):
 
     for x, look_at in enumerate(look_at_all):
         look_at_geometry = look_at.to_geographic_loc_list()
-
-        sp_camera.set_frame(mf.recording, look_at.frame)
-        size = sp_camera.look_at_all(look_at_geometry, width)
-        spherical_image = sp_camera.crop_to_geometry(
-            sp_camera.acquire(size), look_at_geometry
-        )
-
-        # Write output
         db_id = mf.spatialite_cursor[db.field_info_map["rowid"].idx]
         print(
-            "Snapshot:", "db id", db_id, "nr", x + 1, "/", nr_snapshots, geom.geom_type
+            "Snapshot:",
+            "db id",
+            db_id,
+            "nr",
+            x + 1,
+            "/",
+            nr_snapshots,
+            geometry.geom_type,
         )
-
         filename = (
             "output/snapshot_db_id:"
             + str(db_id)
             + "_"
             + str(x + 1)
             + "_"
-            + geom.geom_type
+            + geometry.geom_type
             + ".jpeg"
         )
-
-        add_to_output(look_at.frame, look_at.geometry, filename, x + 1, mf)
-
-        with open(filename, "wb") as image_file:
-            image_file.write(spherical_image.get_image().getvalue())
-            spherical_image.get_image().close()
+        error = ""
+        if mf.recording != None and look_at.frame != None:
+            try:
+                sp_camera.set_frame(mf.recording, look_at.frame)
+                size = sp_camera.look_at_all(look_at_geometry, width)
+                spherical_image = sp_camera.crop_to_geometry(
+                    sp_camera.acquire(size), look_at_geometry
+                )
+                with open(filename, "wb") as image_file:
+                    image_file.write(spherical_image.get_image().getvalue())
+                    spherical_image.get_image().close()
+            except Exception as e:
+                error = str(e)
+                print("Exception:", error)
+                print("Properties:", mf.properties)
+                print("Metadata:", mf.metadata)
+        else:
+            error = f"No frame found within {DISTANCE_MIN}-{DISTANCE_MAX} meters from centroid of geometry."
+            print("Error:", error)
+            print("Spatialite cursor:", mf.spatialite_cursor)
+        add_to_output(db, look_at.frame, look_at.geometry, filename, error, x + 1, mf)
 
 
 db = Spatialite(args.sqlite_db)
-
-
 if not args.recordings_on_disk is None:
     db.set_recordings_on_disk_root_folder(args.recordings_on_disk)
-
 if not args.sqlite_recording is None:
     db.set_recording_field(args.sqlite_recording)
-
 if not args.sqlite_framenr is None:
     db.set_frame_index_field(args.sqlite_framenr)
-
 if not args.sqlite_geometry is None:
     db.set_geometry_field_name(args.sqlite_geometry)
     db.blob_contains_geometry(args.sqlite_geometry)
-
 db.set_remote_db_connection(connection)
-
 db.open()
 db.resolve()
 db.show_info()
-
-sp_camera = SphericalCamera()
-sp_camera.set_network_client(client)
 
 fmi: FrameMatchedIterator = db.get_matched_frames_iterator()
 fmi.set_distance_limits(DISTANCE_MIN, DISTANCE_MAX)
 fmi.set_frame_limit(FRAME_LIMIT)
 fmi.set_frame_selector(GEOM_HEADING_FRAME_SELECTOR)
-
 if not args.recording_id is None:
     fmi.set_static_recording_by_id(args.recording_id)
-
 
 mf: FrameMatchedIterator.MatchedFrame = next(fmi, None)
 
 while mf != None:
+    assert mf.spatialite_cursor != None
     try:
-        if mf.oke():
-            take_snapshot(db, mf, geod)
-        else:
-            print("\nIncomplete match")
-            print(mf.dump())
+        take_snapshot(db, mf)
     except Exception as e:
-        if str(e) == "Request-sent":
-            # reset network connection
-            client = util.get_client(args)
-            sp_camera.set_network_client(client)
         print("Exception:", e)
         print("Properties:", mf.properties)
         print("Metadata:", mf.metadata)
-        pass
     mf = next(fmi, None)
 
 db.close()

@@ -1,5 +1,5 @@
 """Horus Media"""
-# Copyright(C) 2019, 2020 Horus View and Explore B.V.
+# Copyright(C) 2019, 2020, 2023 Horus View and Explore B.V.
 
 
 from dataclasses import dataclass
@@ -224,27 +224,44 @@ class Client:
     def __init__(self, url="http://localhost:5050/web/", timeout=4):
         self.url = url
         self.__parsed_url = urllib.parse.urlparse(url)
+        self.__timeout = timeout
         self.__connection = http.client.HTTPConnection(
-            self.__parsed_url.hostname, self.__parsed_url.port, timeout=timeout
+            self.__parsed_url.hostname, self.__parsed_url.port, timeout=self.__timeout
         )
-        self.__connection.connect()
         self.attempts = 5
         self.attempts_interval = 3  # seconds
 
     def fetch(self, request):
         request.url = urllib.parse.urljoin(self.__parsed_url.path, request.resource)
-        self.__connection.request("GET", request.url)
+        response = None
         attempts = self.attempts
-        while attempts > 0:
+        while response is None and attempts > 0:
             attempts -= 1
             try:
+                self.__connection.request("GET", request.url)
                 response = self.__connection.getresponse()
-                attempts = 0
+            except (
+                ConnectionError,
+                http.client.ImproperConnectionState,
+            ) as connection_error:
+                logging.error(f'{connection_error}. Requesting "{request.url}".')
+                logging.error(f"New connection attempt in {self.attempts_interval}s.")
+                time.sleep(self.attempts_interval)
+                self.__connection = http.client.HTTPConnection(
+                    self.__parsed_url.hostname,
+                    self.__parsed_url.port,
+                    timeout=self.__timeout,
+                )
+                logging.error(f"New request attempt in {self.attempts_interval}s.")
+                time.sleep(self.attempts_interval)
             except Exception as exception:
                 logging.error(f'{exception}. Requesting "{request.url}".')
-                logging.error(f"New attempt in {self.attempts_interval}s .")
+                logging.error(f"New attempt in {self.attempts_interval}s.")
                 time.sleep(self.attempts_interval)
-
+        if response is None:
+            raise Exception(
+                f'No response after {self.attempts} attempts while requesting "{request.url}".'
+            )
         request.response = response
         result = response.read()
         if type(request.local_file) == str:
